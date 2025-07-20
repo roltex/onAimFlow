@@ -661,9 +661,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenFlow }) => {
                             Connections
                           </th>
                           <th className={`text-left p-4 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            Updated
-                          </th>
-                          <th className={`text-left p-4 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                             Actions
                           </th>
                         </tr>
@@ -721,9 +718,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenFlow }) => {
                             </td>
                             <td className={`p-4 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
                               {flow.edgeCount}
-                            </td>
-                            <td className={`p-4 ${isDark ? 'text-white/60' : 'text-gray-600'} text-sm`}>
-                              {formatDate(flow.updatedAt)}
                             </td>
                             <td className="p-4">
                               <div className="flex space-x-2">
@@ -933,9 +927,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenFlow }) => {
                             Configuration Fields
                           </th>
                           <th className={`text-left p-4 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            Created
-                          </th>
-                          <th className={`text-left p-4 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                             Actions
                           </th>
                         </tr>
@@ -1027,9 +1018,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenFlow }) => {
                                   </span>
                                 ))}
                               </div>
-                            </td>
-                            <td className={`p-4 ${isDark ? 'text-white/60' : 'text-gray-600'} text-sm`}>
-                              {formatDate(nodeType.createdAt)}
                             </td>
                             <td className="p-4">
                               <div className="flex space-x-2">
