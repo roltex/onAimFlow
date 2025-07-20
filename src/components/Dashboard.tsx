@@ -416,7 +416,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenFlow }) => {
   }, [dynamicNodeTypes])
 
 
-
   return (
     <>
       <Header 
