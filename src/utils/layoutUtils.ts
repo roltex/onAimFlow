@@ -7,6 +7,57 @@ const nodeHeight = 120
 
 export type LayoutDirection = 'TB' | 'LR' | 'BT' | 'RL'
 
+interface LayoutPreferences {
+  defaultDirection: LayoutDirection
+}
+
+const LAYOUT_STORAGE_KEY = 'onAimFlow-defaultLayout'
+
+const DEFAULT_LAYOUT_PREFERENCES: LayoutPreferences = {
+  defaultDirection: 'TB'
+}
+
+/**
+ * Save layout preferences to localStorage
+ */
+export const saveLayoutPreferences = (preferences: Partial<LayoutPreferences>) => {
+  try {
+    if (preferences.defaultDirection) {
+      localStorage.setItem(LAYOUT_STORAGE_KEY, preferences.defaultDirection)
+    }
+  } catch (error) {
+    console.warn('Failed to save layout preferences to localStorage:', error)
+  }
+}
+
+/**
+ * Load layout preferences from localStorage
+ */
+export const loadLayoutPreferences = (): LayoutPreferences => {
+  try {
+    const defaultDirection = localStorage.getItem(LAYOUT_STORAGE_KEY) as LayoutDirection
+    return {
+      defaultDirection: defaultDirection || DEFAULT_LAYOUT_PREFERENCES.defaultDirection
+    }
+  } catch (error) {
+    console.warn('Failed to load layout preferences from localStorage:', error)
+    return DEFAULT_LAYOUT_PREFERENCES
+  }
+}
+
+/**
+ * Get the default layout direction
+ */
+export const getDefaultLayoutDirection = (): LayoutDirection => {
+  try {
+    const preferences = loadLayoutPreferences()
+    return preferences.defaultDirection
+  } catch (error) {
+    console.warn('Failed to load default layout direction:', error)
+    return DEFAULT_LAYOUT_PREFERENCES.defaultDirection
+  }
+}
+
 /**
  * Get layouted elements using dagre
  */

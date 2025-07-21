@@ -17,7 +17,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_PREFERENCES: EdgeStylePreferences = {
   edgeType: 'smoothstep',
-  edgeStyle: 'solid',
+  edgeStyle: 'dashed',
   edgeAnimation: 'animated'
 }
 

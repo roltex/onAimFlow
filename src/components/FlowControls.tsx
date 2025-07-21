@@ -45,7 +45,7 @@ export const FlowControls: React.FC<FlowControlsProps> = ({
 
   const layoutDirections: LayoutDirection[] = ['TB', 'LR']
   const edgeTypes: EdgeType[] = ['smoothstep', 'bezier', 'straight', 'step']
-  const edgeStyles: EdgeStyle[] = ['solid', 'dashed']
+  const edgeStyles: EdgeStyle[] = ['dashed', 'solid']
   const edgeAnimations: EdgeAnimation[] = ['animated', 'static']
 
   // Icon mapping for each direction
@@ -102,10 +102,15 @@ export const FlowControls: React.FC<FlowControlsProps> = ({
   // Icon mapping for edge styles
   const getEdgeStyleIcon = (style: EdgeStyle) => {
     switch (style) {
-      case 'solid': return <FiMinus className="w-3 h-3" />
       case 'dashed': return <div className="w-3 h-3 flex items-center justify-center">
-        <div className="w-full h-0.5 bg-current" style={{ background: 'repeating-linear-gradient(to right, currentColor 0, currentColor 2px, transparent 2px, transparent 4px)' }}></div>
+        <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+          <line x1="1" y1="6" x2="3" y2="6" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="5" y1="6" x2="7" y2="6" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="9" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
       </div>
+      case 'solid': return <FiMinus className="w-3 h-3" />
+
       default: return <FiMinus className="w-3 h-3" />
     }
   }

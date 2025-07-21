@@ -27,7 +27,7 @@ import { useEdgeDrop } from '../hooks/useEdgeDrop'
 import type { CustomNodeData } from '../types'
 import type { NormalizedNodeType } from './NodePalette'
 import { FlowControls } from './FlowControls'
-import { getLayoutedElements, type LayoutDirection } from '../utils/layoutUtils'
+import { getLayoutedElements, type LayoutDirection, saveLayoutPreferences } from '../utils/layoutUtils'
 import { loadEdgeStylePreferences, saveEdgeStylePreferences } from '../utils/edgeStyleStorage'
 import type { EdgeType } from './FlowControls'
 
@@ -146,6 +146,8 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
   const [currentEdgeType, setCurrentEdgeType] = useState<EdgeType>(preferences.edgeType)
   const [currentEdgeStyle, setCurrentEdgeStyle] = useState<'solid' | 'dashed'>(preferences.edgeStyle)
   const [currentEdgeAnimation, setCurrentEdgeAnimation] = useState<'animated' | 'static'>(preferences.edgeAnimation)
+  
+
 
   // Debounced update refs for composite changes
   const compositeUpdateTimeoutRef = useRef<number | null>(null)
@@ -404,6 +406,9 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
   // Layout functionality
   const onLayout = useCallback((direction: LayoutDirection) => {
     if (nodes.length === 0) return
+    
+    // Save layout preference to localStorage
+    saveLayoutPreferences({ defaultDirection: direction })
     
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       nodes,
