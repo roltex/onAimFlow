@@ -42,7 +42,10 @@ export const useEdgeDrop = (
   edges: Edge[],
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void,
   setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void,
-  isDark: boolean
+  isDark: boolean,
+  currentEdgeType: string = 'smoothstep',
+  currentEdgeStyle: 'solid' | 'dashed' = 'solid',
+  currentEdgeAnimation: 'animated' | 'static' = 'animated'
 ): UseEdgeDropReturn => {
   const { screenToFlowPosition } = useReactFlow()
   const [edgeDropState, setEdgeDropState] = useState<EdgeDropState>({
@@ -91,15 +94,16 @@ export const useEdgeDrop = (
       id: `edge-${Date.now()}`,
       source: sourceId,
       target: targetId,
-      type: 'smoothstep',
-      animated: true,
+      type: currentEdgeType,
+      animated: currentEdgeAnimation === 'animated',
       style: {
         stroke: isDark ? '#60a5fa' : '#3b82f6',
         strokeWidth: 3,
         filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+        strokeDasharray: currentEdgeStyle === 'dashed' ? '5,5' : undefined,
       },
     }
-  }, [isDark])
+  }, [isDark, currentEdgeType, currentEdgeStyle, currentEdgeAnimation])
 
   // Memoized edge splitting function
   const splitEdge = useCallback((edgeId: string, newNodeId: string): { edge1: Edge; edge2: Edge } => {
@@ -112,12 +116,13 @@ export const useEdgeDrop = (
       id: `edge-${Date.now()}-1`,
       source: edge.source,
       target: newNodeId,
-      type: 'smoothstep',
-      animated: true,
+      type: currentEdgeType,
+      animated: currentEdgeAnimation === 'animated',
       style: {
         stroke: isDark ? '#60a5fa' : '#3b82f6',
         strokeWidth: 3,
         filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+        strokeDasharray: currentEdgeStyle === 'dashed' ? '5,5' : undefined,
       },
     }
 
@@ -125,17 +130,18 @@ export const useEdgeDrop = (
       id: `edge-${Date.now()}-2`,
       source: newNodeId,
       target: edge.target,
-      type: 'smoothstep',
-      animated: true,
+      type: currentEdgeType,
+      animated: currentEdgeAnimation === 'animated',
       style: {
         stroke: isDark ? '#60a5fa' : '#3b82f6',
         strokeWidth: 3,
         filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+        strokeDasharray: currentEdgeStyle === 'dashed' ? '5,5' : undefined,
       },
     }
 
     return { edge1, edge2 }
-  }, [edges, isDark])
+  }, [edges, isDark, currentEdgeType, currentEdgeStyle, currentEdgeAnimation])
 
   // Optimized connection end handler
   const handleConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {

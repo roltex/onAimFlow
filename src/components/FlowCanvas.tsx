@@ -26,6 +26,10 @@ import { EdgeDropModal } from './modals/EdgeDropModal'
 import { useEdgeDrop } from '../hooks/useEdgeDrop'
 import type { CustomNodeData } from '../types'
 import type { NormalizedNodeType } from './NodePalette'
+import { FlowControls } from './FlowControls'
+import { getLayoutedElements, type LayoutDirection } from '../utils/layoutUtils'
+import { loadEdgeStylePreferences, saveEdgeStylePreferences } from '../utils/edgeStyleStorage'
+import type { EdgeType } from './FlowControls'
 
 interface FlowCanvasProps {
   flowId?: string
@@ -137,8 +141,29 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
   const [selectedNodes, setSelectedNodes] = useState<ReactFlowNode[]>([])
   const [selectedEdges, setSelectedEdges] = useState<ReactFlowEdge[]>([])
 
+  // Edge style state - load from localStorage
+  const preferences = loadEdgeStylePreferences()
+  const [currentEdgeType, setCurrentEdgeType] = useState<EdgeType>(preferences.edgeType)
+  const [currentEdgeStyle, setCurrentEdgeStyle] = useState<'solid' | 'dashed'>(preferences.edgeStyle)
+  const [currentEdgeAnimation, setCurrentEdgeAnimation] = useState<'animated' | 'static'>(preferences.edgeAnimation)
+
   // Debounced update refs for composite changes
   const compositeUpdateTimeoutRef = useRef<number | null>(null)
+
+  // Apply saved edge styles to existing edges on load
+  useEffect(() => {
+    if (edges.length > 0) {
+      setEdges(eds => eds.map(edge => ({
+        ...edge,
+        type: currentEdgeType,
+        animated: currentEdgeAnimation === 'animated',
+        style: {
+          ...edge.style,
+          strokeDasharray: currentEdgeStyle === 'dashed' ? '5,5' : undefined
+        }
+      })))
+    }
+  }, []) // Only run once on mount
 
   // Helper functions to convert between React Flow types and our types
   const convertToOurNode = (rfNode: ReactFlowNode): Node => ({
@@ -192,7 +217,7 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
     handleEdgeDoubleClick,
     handleNodeTypeSelect,
     closeModal
-  } = useEdgeDrop(nodes, edges, setNodes, setEdges, isDark)
+  } = useEdgeDrop(nodes, edges, setNodes, setEdges, isDark, currentEdgeType, currentEdgeStyle, currentEdgeAnimation)
 
   // Handle node click - simple and reliable
   const handleNodeClick = useCallback((nodeId: string) => {
@@ -235,17 +260,18 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
         id: `edge-${Date.now()}`,
         source: params.source!,
         target: params.target!,
-        type: 'smoothstep',
-        animated: true,
+        type: currentEdgeType,
+        animated: currentEdgeAnimation === 'animated',
         style: {
           stroke: isDark ? '#60a5fa' : '#3b82f6',
           strokeWidth: 3,
           filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+          strokeDasharray: currentEdgeStyle === 'dashed' ? '5,5' : undefined,
         },
       }
       setEdges((eds) => addEdge(newEdge, eds))
     },
-    [setEdges, isDark]
+    [setEdges, isDark, currentEdgeType, currentEdgeStyle, currentEdgeAnimation]
   )
 
   // Handle modal save
@@ -375,20 +401,119 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
     [setNodes, reactFlowInstance, isFlowPublished, getCompositeNode]
   )
 
-  // Prevent React Flow's built-in delete key handling
+  // Layout functionality
+  const onLayout = useCallback((direction: LayoutDirection) => {
+    if (nodes.length === 0) return
+    
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      nodes,
+      edges,
+      direction
+    )
+    
+    setNodes([...layoutedNodes])
+    setEdges([...layoutedEdges])
+  }, [nodes, edges, setNodes, setEdges])
+
+  // Edge style functionality
+  const onEdgeStyleChange = useCallback((edgeType: EdgeType) => {
+    setCurrentEdgeType(edgeType)
+    
+    // Save to localStorage
+    saveEdgeStylePreferences({ edgeType })
+    
+    // Update all existing edges with the new type
+    setEdges(eds => eds.map(edge => ({
+      ...edge,
+      type: edgeType
+    })))
+  }, [setEdges])
+
+  // Edge line style functionality
+  const onEdgeStyleToggle = useCallback((style: 'solid' | 'dashed') => {
+    setCurrentEdgeStyle(style)
+    
+    // Save to localStorage
+    saveEdgeStylePreferences({ edgeStyle: style })
+    
+    // Update all existing edges with the new style
+    setEdges(eds => eds.map(edge => ({
+      ...edge,
+      style: {
+        ...edge.style,
+        strokeDasharray: style === 'dashed' ? '5,5' : undefined
+      }
+    })))
+  }, [setEdges])
+
+  // Edge animation functionality
+  const onEdgeAnimationToggle = useCallback((animation: 'animated' | 'static') => {
+    setCurrentEdgeAnimation(animation)
+    
+    // Save to localStorage
+    saveEdgeStylePreferences({ edgeAnimation: animation })
+    
+    // Update all existing edges with the new animation
+    setEdges(edges => edges.map(edge => ({
+      ...edge,
+      animated: animation === 'animated'
+    })))
+  }, [setEdges])
+
+  // Keyboard shortcuts and event handling
   useEffect(() => {
-    const preventDelete = (event: KeyboardEvent) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't allow shortcuts when flow is published
+      if (isFlowPublished) return
+      
+      // Check if user is typing in an input field or textarea
+      const target = event.target as HTMLElement
+      const isTyping = target.tagName === 'INPUT' || 
+                      target.tagName === 'TEXTAREA' || 
+                      target.contentEditable === 'true' ||
+                      target.closest('[contenteditable="true"]')
+      
+      // If user is typing, allow normal text editing behavior
+      if (isTyping) return
+      
+      // Layout shortcuts
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key.toLowerCase()) {
+          case '1':
+            event.preventDefault()
+            onLayout('TB') // Vertical layout
+            break
+          case '2':
+            event.preventDefault()
+            onLayout('LR') // Horizontal layout
+            break
+        }
+      }
+
+      // Edge style shortcuts
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key.toLowerCase()) {
+          case 's':
+            event.preventDefault()
+            onEdgeStyleChange('smoothstep') // Smooth edges
+            break
+          case 'b':
+            event.preventDefault()
+            onEdgeStyleChange('bezier') // Bezier edges
+            break
+          case 'l':
+            event.preventDefault()
+            onEdgeStyleChange('straight') // Straight edges
+            break
+          case 't':
+            event.preventDefault()
+            onEdgeStyleChange('step') // Step edges
+            break
+        }
+      }
+      
+      // Delete key handling
       if (event.key === 'Delete' || event.key === 'Backspace') {
-        // Check if user is typing in an input field or textarea
-        const target = event.target as HTMLElement
-        const isTyping = target.tagName === 'INPUT' || 
-                        target.tagName === 'TEXTAREA' || 
-                        target.contentEditable === 'true' ||
-                        target.closest('[contenteditable="true"]')
-        
-        // If user is typing, allow normal text editing behavior
-        if (isTyping) return
-        
         // If nodes or edges are selected, prevent deletion
         if (selectedNodes.length > 0 || selectedEdges.length > 0) {
           event.preventDefault()
@@ -397,11 +522,11 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
       }
     }
     
-    document.addEventListener('keydown', preventDelete, true) // Use capture phase
+    document.addEventListener('keydown', handleKeyDown, true) // Use capture phase
     return () => {
-      document.removeEventListener('keydown', preventDelete, true)
+      document.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [selectedNodes, selectedEdges])
+  }, [selectedNodes, selectedEdges, onLayout, isFlowPublished])
 
   // Optimized edge drop handlers are now provided by the useEdgeDrop hook
 
@@ -494,6 +619,16 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
         <MiniMap 
           nodeColor={isDark ? "#3b82f6" : "#1f2937"}
           maskColor={isDark ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)"}
+        />
+        <FlowControls
+          onLayout={onLayout}
+          onEdgeStyleChange={onEdgeStyleChange}
+          onEdgeStyleToggle={onEdgeStyleToggle}
+          onEdgeAnimationToggle={onEdgeAnimationToggle}
+          currentEdgeType={currentEdgeType}
+          currentEdgeStyle={currentEdgeStyle}
+          currentEdgeAnimation={currentEdgeAnimation}
+          disabled={isFlowPublished}
         />
       </ReactFlow>
       
