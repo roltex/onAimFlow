@@ -2,6 +2,8 @@ import React, { memo, useMemo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useTheme } from './ThemeProvider'
 import { useDynamicNodes } from '../contexts/DynamicNodeContext'
+import { useCompositeNodes } from '../contexts/CompositeNodeContext'
+import { IconRenderer } from './IconRenderer'
 import type { CustomNodeData } from '../types'
 
 interface CustomNodeProps {
@@ -15,6 +17,7 @@ interface CustomNodeProps {
 export const CustomNode = memo<CustomNodeProps>(({ data, onClick }) => {
   const { isDark } = useTheme()
   const { getDynamicNodeType } = useDynamicNodes()
+  const { getCompositeNode } = useCompositeNodes()
 
   // Memoize handle styles to prevent recalculation
   const handleStyles = useMemo(() => ({
@@ -66,6 +69,10 @@ export const CustomNode = memo<CustomNodeProps>(({ data, onClick }) => {
   const dynamicNodeType = data.dynamicNodeTypeId ? getDynamicNodeType(data.dynamicNodeTypeId) : null
   const isDynamicNode = dynamicNodeType !== null
 
+  // Get composite node if this is a composite node
+  const compositeNode = data.compositeNodeId ? getCompositeNode(data.compositeNodeId) : null
+  const isCompositeNode = compositeNode !== null
+
   // Get port definitions for dynamic nodes
   const inputPorts = isDynamicNode && dynamicNodeType 
     ? dynamicNodeType.ports.filter(port => port.type === 'input' || port.type === 'input/output')
@@ -73,6 +80,20 @@ export const CustomNode = memo<CustomNodeProps>(({ data, onClick }) => {
   const outputPorts = isDynamicNode && dynamicNodeType 
     ? dynamicNodeType.ports.filter(port => port.type === 'output' || port.type === 'input/output')
     : []
+
+  // Get exposed ports for composite nodes
+  const compositeInputPorts = isCompositeNode && compositeNode ? compositeNode.exposedInputs : []
+  const compositeOutputPorts = isCompositeNode && compositeNode ? compositeNode.exposedOutputs : []
+
+  // Determine if composite node should show input/output handles based on connection type
+  const shouldShowInput = isCompositeNode && compositeNode && (
+    compositeNode.connectionType === 'input' || 
+    compositeNode.connectionType === 'input/output'
+  )
+  const shouldShowOutput = isCompositeNode && compositeNode && (
+    compositeNode.connectionType === 'output' || 
+    compositeNode.connectionType === 'input/output'
+  )
 
   // Check if node is properly configured
   const isConfigured = (() => {
@@ -85,6 +106,8 @@ export const CustomNode = memo<CustomNodeProps>(({ data, onClick }) => {
         return !!(data.selectProperty && data.selectProperty.trim() !== '')
       case 'output':
         return !!(data.outputSteps && data.outputSteps.length > 0)
+      case 'composite':
+        return isCompositeNode // Composite nodes are always configured if they exist
       default:
         // For dynamic nodes, check if required fields are filled
         if (isDynamicNode && dynamicNodeType) {
@@ -119,7 +142,55 @@ export const CustomNode = memo<CustomNodeProps>(({ data, onClick }) => {
       )}
 
       {/* Input handles */}
-      {isDynamicNode ? (
+      {isCompositeNode ? (
+        // For composite nodes, show handles based on connection type and exposed ports
+        shouldShowInput ? (
+          compositeInputPorts.length === 1 ? (
+            // Single input port - center it
+            <Handle
+              key={`input-${compositeInputPorts[0].id}`}
+              type="target"
+              position={Position.Left}
+              id={compositeInputPorts[0].id}
+              style={handleStyles.input}
+              onMouseEnter={handleMouseEnter('input')}
+              onMouseLeave={handleMouseLeave('input')}
+            />
+          ) : compositeInputPorts.length > 1 ? (
+            // Multiple input ports - distribute them evenly
+            compositeInputPorts.map((port, index) => {
+              const totalPorts = compositeInputPorts.length
+              const spacing = 100 / (totalPorts + 1) // Distribute evenly across 100% height
+              const topPosition = spacing * (index + 1)
+              
+              return (
+                <Handle
+                  key={`input-${port.id}`}
+                  type="target"
+                  position={Position.Left}
+                  id={port.id}
+                  style={{
+                    ...handleStyles.input,
+                    top: `${topPosition}%`,
+                    transform: 'translateY(-50%)', // Center the handle on its position
+                  }}
+                  onMouseEnter={handleMouseEnter('input')}
+                  onMouseLeave={handleMouseLeave('input')}
+                />
+              )
+            })
+          ) : (
+            // No exposed input ports but connection type allows input - show default handle
+            <Handle
+              type="target"
+              position={Position.Left}
+              style={handleStyles.input}
+              onMouseEnter={handleMouseEnter('input')}
+              onMouseLeave={handleMouseLeave('input')}
+            />
+          )
+        ) : null
+      ) : isDynamicNode ? (
         // For dynamic nodes, render handles based on port definitions
         inputPorts.length === 1 ? (
           // Single input port - center it
@@ -172,7 +243,7 @@ export const CustomNode = memo<CustomNodeProps>(({ data, onClick }) => {
       {/* Node content */}
       <div className="flex items-center space-x-3">
         <div className={`w-8 h-8 bg-gradient-to-r ${data.color || 'from-blue-500 to-purple-600'} rounded-lg flex items-center justify-center flex-shrink-0 shadow-md`}>
-          <span className="text-white text-sm font-bold">{data.icon}</span>
+                      <IconRenderer icon={data.icon} className="text-white text-sm" />
         </div>
         <div className="min-w-0">
           <div className={`font-semibold truncate ${isDark ? 'text-white' : 'text-gray-800'}`}>
@@ -223,13 +294,68 @@ export const CustomNode = memo<CustomNodeProps>(({ data, onClick }) => {
                   {Object.keys(data.dynamicFieldValues).length} field{Object.keys(data.dynamicFieldValues).length !== 1 ? 's' : ''} configured
                 </div>
               )}
+
+              {/* Show configuration status for COMPOSITE nodes */}
+              {isCompositeNode && compositeNode && (
+                <div className={`text-xs ${isDark ? 'text-purple-300' : 'text-purple-600'}`}>
+                  Composite • {compositeNode.internalNodes.length} nodes
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
-      
+
       {/* Output handles */}
-      {isDynamicNode ? (
+      {isCompositeNode ? (
+        // For composite nodes, show handles based on connection type and exposed ports
+        shouldShowOutput ? (
+          compositeOutputPorts.length === 1 ? (
+            // Single output port - center it
+            <Handle
+              key={`output-${compositeOutputPorts[0].id}`}
+              type="source"
+              position={Position.Right}
+              id={compositeOutputPorts[0].id}
+              style={handleStyles.output}
+              onMouseEnter={handleMouseEnter('output')}
+              onMouseLeave={handleMouseLeave('output')}
+            />
+          ) : compositeOutputPorts.length > 1 ? (
+            // Multiple output ports - distribute them evenly
+            compositeOutputPorts.map((port, index) => {
+              const totalPorts = compositeOutputPorts.length
+              const spacing = 100 / (totalPorts + 1) // Distribute evenly across 100% height
+              const topPosition = spacing * (index + 1)
+              
+              return (
+                <Handle
+                  key={`output-${port.id}`}
+                  type="source"
+                  position={Position.Right}
+                  id={port.id}
+                  style={{
+                    ...handleStyles.output,
+                    top: `${topPosition}%`,
+                    transform: 'translateY(-50%)', // Center the handle on its position
+                  }}
+                  onMouseEnter={handleMouseEnter('output')}
+                  onMouseLeave={handleMouseLeave('output')}
+                />
+              )
+            })
+          ) : (
+            // No exposed output ports but connection type allows output - show default handle
+            <Handle
+              type="source"
+              position={Position.Right}
+              style={handleStyles.output}
+              onMouseEnter={handleMouseEnter('output')}
+              onMouseLeave={handleMouseLeave('output')}
+            />
+          )
+        ) : null
+      ) : isDynamicNode ? (
         // For dynamic nodes, render handles based on port definitions
         outputPorts.length === 1 ? (
           // Single output port - center it
@@ -277,6 +403,17 @@ export const CustomNode = memo<CustomNodeProps>(({ data, onClick }) => {
             onMouseLeave={handleMouseLeave('output')}
           />
         )
+      )}
+
+      {/* Composite indicator for composite nodes */}
+      {isCompositeNode && (
+        <div className={`absolute -top-2 -right-2 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
+          isDark 
+            ? 'bg-purple-500 text-white' 
+            : 'bg-purple-600 text-white'
+        }`}>
+          🔗
+        </div>
       )}
     </div>
   )

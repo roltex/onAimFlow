@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useTheme } from '../ThemeProvider'
 import { useDynamicNodes } from '../../contexts/DynamicNodeContext'
+import { IconSelector } from '../IconSelector'
 import type { DynamicNodeType, PortDefinition, ConfigurableField, FieldType, SelectOption } from '../../types'
 
 interface DynamicNodeEditorModalProps {
@@ -258,16 +259,10 @@ export const DynamicNodeEditorModal: React.FC<DynamicNodeEditorModalProps> = ({
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-700'}`}>
                 Icon
               </label>
-              <input
-                type="text"
+              <IconSelector
                 value={formData.icon}
-                onChange={(e) => setFormData(prev => ({ ...prev, icon: e.target.value }))}
-                className={`w-full px-3 py-2 rounded-lg border ${
-                  isDark 
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                placeholder="🔧"
+                onChange={(icon) => setFormData(prev => ({ ...prev, icon }))}
+                placeholder="Select an icon..."
               />
             </div>
 

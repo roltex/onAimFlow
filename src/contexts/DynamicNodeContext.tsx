@@ -36,7 +36,7 @@ export const DynamicNodeProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }))
         setDynamicNodeTypes(parsedDynamicNodes)
       } catch (error) {
-        console.error('Failed to load dynamic node types:', error)
+
         setDynamicNodeTypes([])
       }
     } else {
@@ -184,7 +184,7 @@ export const DynamicNodeProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       URL.revokeObjectURL(link.href)
     } catch (error) {
-      console.error('Export failed:', error)
+
       throw error
     }
   }, [dynamicNodeTypes])

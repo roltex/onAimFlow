@@ -2,14 +2,16 @@ import React from 'react'
 import { useTheme } from '../ThemeProvider'
 import type { FlowValidationResult } from '../../types'
 import { getValidationSummary } from '../../utils/flowValidation'
+import { getCompositeValidationSummary, type CompositeValidationResult } from '../../utils/compositeValidation'
 
 interface ValidationModalProps {
   isOpen: boolean
   onClose: () => void
   onConfirm?: () => void
-  validationResult: FlowValidationResult
+  validationResult: FlowValidationResult | CompositeValidationResult
   flowName: string
   action: 'publish' | 'validate'
+  itemType?: 'flow' | 'composite'
 }
 
 /**
@@ -21,21 +23,25 @@ export const ValidationModal: React.FC<ValidationModalProps> = ({
   onConfirm,
   validationResult,
   flowName,
-  action
+  action,
+  itemType = 'flow'
 }) => {
   const { isDark } = useTheme()
 
   if (!isOpen) return null
 
   const canProceed = validationResult.isValid
-  const summary = getValidationSummary(validationResult)
+  const summary = itemType === 'composite' 
+    ? getCompositeValidationSummary(validationResult as CompositeValidationResult)
+    : getValidationSummary(validationResult as FlowValidationResult)
+  const itemName = itemType === 'composite' ? 'Composite' : 'Flow'
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-6 w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {action === 'publish' ? 'Publish Flow' : 'Flow Validation'}
+            {action === 'publish' ? `Publish ${itemName}` : `${itemName} Validation`}
           </h2>
           <button
             onClick={onClose}
@@ -49,10 +55,10 @@ export const ValidationModal: React.FC<ValidationModalProps> = ({
           </button>
         </div>
 
-        {/* Flow Name */}
+        {/* Item Name */}
         <div className="mb-4">
           <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-            Flow: <span className="font-medium">{flowName}</span>
+            {itemName}: <span className="font-medium">{flowName}</span>
           </p>
         </div>
 
@@ -119,7 +125,7 @@ export const ValidationModal: React.FC<ValidationModalProps> = ({
             isDark ? 'bg-gray-700 border border-gray-600' : 'bg-gray-50 border border-gray-200'
           }`}>
             <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-              Please fix the errors above before publishing this flow.
+              Please fix the errors above before publishing this {itemType}.
             </p>
           </div>
         )}
@@ -151,7 +157,7 @@ export const ValidationModal: React.FC<ValidationModalProps> = ({
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              🚀 Publish Flow
+              🚀 Publish {itemName}
             </button>
           )}
         </div>

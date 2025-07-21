@@ -9,17 +9,20 @@ import {
   MiniMap,
   ReactFlowProvider,
   useReactFlow,
-  type Node,
-  type Edge,
+  type Node as ReactFlowNode,
+  type Edge as ReactFlowEdge,
   type Connection,
 } from '@xyflow/react'
+import type { Node, Edge } from '../types'
 import '@xyflow/react/dist/style.css'
 import { useTheme } from './ThemeProvider'
 import { useFlowManager } from '../contexts/FlowManagerContext'
 import { useDynamicNodes } from '../contexts/DynamicNodeContext'
+import { useCompositeNodes } from '../contexts/CompositeNodeContext'
 import { CustomNode } from './CustomNode'
 import { NodeConfigModal } from './modals/NodeConfigModal'
 import { EdgeDropModal } from './modals/EdgeDropModal'
+
 import { useEdgeDrop } from '../hooks/useEdgeDrop'
 import type { NodeType, CustomNodeData, DynamicNodeType } from '../types'
 
@@ -27,6 +30,12 @@ interface FlowCanvasProps {
   flowId?: string
   onNodesChange?: (nodes: Node[]) => void
   onEdgesChange?: (edges: Edge[]) => void
+  // Composite editor props
+  isCompositeEditor?: boolean
+  compositeNode?: any
+  onCompositeChange?: (nodes: any[], edges: any[]) => void
+  onSave?: (updatedComposite: any) => void
+  isFlowPublished?: boolean
 }
 
 // Create a wrapper component that handles clicks more reliably
@@ -57,58 +66,123 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
   flowId,
   onNodesChange,
   onEdgesChange,
+  isCompositeEditor = false,
+  compositeNode,
+  onCompositeChange,
+  isFlowPublished: propIsFlowPublished
 }) => {
   const { isDark } = useTheme()
   const { getFlow } = useFlowManager()
   const { dynamicNodeTypes } = useDynamicNodes()
+  const { getCompositeNode } = useCompositeNodes()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
   
   // Check if current flow is published
   const currentFlow = flowId ? getFlow(flowId) : null
-  const isFlowPublished = currentFlow?.published || false
+  const isFlowPublished = propIsFlowPublished !== undefined ? propIsFlowPublished : (currentFlow?.published || false)
   
   // Generate localStorage keys based on flowId
   const getStorageKey = (type: 'nodes' | 'edges') => {
     return flowId ? `onAimFlow-${type}-${flowId}` : `onAimFlow-${type}`
   }
   
-  // Initialize state from localStorage
-  const getInitialNodes = (): Node[] => {
-    const saved = localStorage.getItem(getStorageKey('nodes'))
-    if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch (e) {
-        console.error('Failed to parse saved nodes:', e)
+  // Initialize state from localStorage or composite
+  const getInitialNodes = (): ReactFlowNode[] => {
+    if (isCompositeEditor && compositeNode) {
+      // For composite editor, use the composite's internal nodes
+      return compositeNode.internalNodes || []
+    } else {
+      // For regular flows, use localStorage
+      const saved = localStorage.getItem(getStorageKey('nodes'))
+      if (saved) {
+        try {
+          return JSON.parse(saved)
+        } catch (e) {
+  
+        }
       }
+      return []
     }
-    return []
   }
   
-  const getInitialEdges = (): Edge[] => {
-    const saved = localStorage.getItem(getStorageKey('edges'))
-    if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch (e) {
-        console.error('Failed to parse saved edges:', e)
+  const getInitialEdges = (): ReactFlowEdge[] => {
+    if (isCompositeEditor && compositeNode) {
+      // For composite editor, use the composite's internal edges
+      return compositeNode.internalEdges || []
+    } else {
+      // For regular flows, use localStorage
+      const saved = localStorage.getItem(getStorageKey('edges'))
+      if (saved) {
+        try {
+          return JSON.parse(saved)
+        } catch (e) {
+  
+        }
       }
+      return []
     }
-    return []
   }
   
   // Initialize state
-  const [nodes, setNodes, onNodesChangeInternal] = useNodesState<Node>(getInitialNodes())
-  const [edges, setEdges, onEdgesChangeInternal] = useEdgesState<Edge>(getInitialEdges())
+  const [nodes, setNodes, onNodesChangeInternal] = useNodesState<ReactFlowNode>(getInitialNodes())
+  const [edges, setEdges, onEdgesChangeInternal] = useEdgesState<ReactFlowEdge>(getInitialEdges())
   
   // Modal state
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null)
+  const [selectedNode, setSelectedNode] = useState<ReactFlowNode | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Track selected nodes/edges from React Flow
-  const [selectedNodes, setSelectedNodes] = useState<Node[]>([])
-  const [selectedEdges, setSelectedEdges] = useState<Edge[]>([])
+  const [selectedNodes, setSelectedNodes] = useState<ReactFlowNode[]>([])
+  const [selectedEdges, setSelectedEdges] = useState<ReactFlowEdge[]>([])
+
+  // Debounced update refs for composite changes
+  const compositeUpdateTimeoutRef = useRef<number | null>(null)
+
+  // Helper functions to convert between React Flow types and our types
+  const convertToOurNode = (rfNode: ReactFlowNode): Node => ({
+    id: rfNode.id,
+    type: rfNode.type || 'custom',
+    position: rfNode.position,
+    data: rfNode.data as CustomNodeData
+  })
+
+  const convertToOurEdge = (rfEdge: ReactFlowEdge): Edge => ({
+    id: rfEdge.id,
+    source: rfEdge.source,
+    target: rfEdge.target,
+    sourceHandle: rfEdge.sourceHandle || undefined,
+    targetHandle: rfEdge.targetHandle || undefined,
+    type: rfEdge.type,
+    style: rfEdge.style || {
+      stroke: isDark ? '#60a5fa' : '#3b82f6',
+      strokeWidth: 3,
+      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+    },
+    animated: rfEdge.animated !== undefined ? rfEdge.animated : true
+  })
+
+  const convertToOurNodes = (rfNodes: ReactFlowNode[]): Node[] => 
+    rfNodes.map(convertToOurNode)
+
+  const convertToOurEdges = (rfEdges: ReactFlowEdge[]): Edge[] => 
+    rfEdges.map(convertToOurEdge)
+
+  // Debounced composite update function
+  const debouncedCompositeUpdate = useCallback(() => {
+    if (compositeUpdateTimeoutRef.current) {
+      clearTimeout(compositeUpdateTimeoutRef.current)
+    }
+    
+    compositeUpdateTimeoutRef.current = window.setTimeout(() => {
+      if (isCompositeEditor && onCompositeChange) {
+        onCompositeChange(convertToOurNodes(nodes), convertToOurEdges(edges))
+      }
+    }, 300) // 300ms debounce
+  }, [nodes, edges, isCompositeEditor, onCompositeChange])
+
+  // Composite creation modal state
+
 
   // Optimized edge drop functionality
   const {
@@ -145,15 +219,17 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
   }, [handleNodeClick])
 
   // Handle selection changes
-  const onSelectionChange = useCallback(({ nodes, edges }: { nodes: Node[], edges: Edge[] }) => {
+  const onSelectionChange = useCallback(({ nodes, edges }: { nodes: ReactFlowNode[], edges: ReactFlowEdge[] }) => {
     setSelectedNodes(nodes)
     setSelectedEdges(edges)
   }, [])
 
+
+
   // Handle node connections
   const onConnect = useCallback(
     (params: Connection) => {
-      const newEdge: Edge = {
+      const newEdge: ReactFlowEdge = {
         id: `edge-${Date.now()}`,
         source: params.source!,
         target: params.target!,
@@ -262,9 +338,9 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
       if (!reactFlowWrapper.current) return
 
       const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect()
-      const nodeType = JSON.parse(
+      const droppedData = JSON.parse(
         event.dataTransfer.getData('application/reactflow')
-      ) as NodeType | DynamicNodeType
+      )
 
       // Calculate drop position
       const position = {
@@ -275,6 +351,37 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
       // Convert to flow coordinates
       const flowPosition = reactFlowInstance.screenToFlowPosition(position)
 
+      // Check if this is a composite node
+      if (droppedData.type === 'composite') {
+        // Get the actual composite node data
+        const compositeData = getCompositeNode(droppedData.compositeNodeId)
+        if (!compositeData) {
+  
+          return
+        }
+
+        const newNode: Node = {
+          id: `composite-${Date.now()}`,
+          type: 'custom',
+          position: flowPosition,
+          data: {
+            label: compositeData.name,
+            description: compositeData.description,
+            icon: compositeData.icon,
+            nodeType: 'composite',
+            color: compositeData.color,
+            compositeNodeId: compositeData.id,
+            // Add connection type to help with handle rendering
+            connectionType: compositeData.connectionType,
+          },
+        }
+        setNodes((nds) => [...nds, newNode])
+        return
+      }
+
+      // Handle regular node types
+      const nodeType = droppedData as NodeType | DynamicNodeType
+      
       // Check if this is a dynamic node type
       const isDynamicNode = 'isCustom' in nodeType && nodeType.isCustom
       
@@ -299,33 +406,55 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
 
       setNodes((nds) => [...nds, newNode])
     },
-    [setNodes, reactFlowInstance, isFlowPublished]
+    [setNodes, reactFlowInstance, isFlowPublished, getCompositeNode]
   )
 
   // Optimized edge drop handlers are now provided by the useEdgeDrop hook
 
-  // Persist nodes to localStorage
+  // Persist nodes to localStorage or composite
   useEffect(() => {
-    onNodesChange?.(nodes)
-    localStorage.setItem(getStorageKey('nodes'), JSON.stringify(nodes))
-  }, [nodes, onNodesChange, getStorageKey])
+    if (isCompositeEditor) {
+      // For composite editor, use debounced update
+      debouncedCompositeUpdate()
+    } else {
+      // For regular flows, use localStorage and onNodesChange
+      onNodesChange?.(convertToOurNodes(nodes))
+      localStorage.setItem(getStorageKey('nodes'), JSON.stringify(nodes))
+    }
+  }, [nodes, onNodesChange, debouncedCompositeUpdate, isCompositeEditor, getStorageKey])
 
-  // Persist edges to localStorage
+  // Persist edges to localStorage or composite
   useEffect(() => {
-    onEdgesChange?.(edges)
-    localStorage.setItem(getStorageKey('edges'), JSON.stringify(edges))
-  }, [edges, onEdgesChange, getStorageKey])
+    if (isCompositeEditor) {
+      // For composite editor, use debounced update (already handled in nodes effect)
+      // No need to call it again here to avoid double calls
+    } else {
+      // For regular flows, use localStorage and onEdgesChange
+      onEdgesChange?.(convertToOurEdges(edges))
+      localStorage.setItem(getStorageKey('edges'), JSON.stringify(edges))
+    }
+  }, [edges, onEdgesChange, isCompositeEditor, getStorageKey])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (compositeUpdateTimeoutRef.current) {
+        clearTimeout(compositeUpdateTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <div 
       ref={reactFlowWrapper}
-      className="flex-1 w-full h-full relative"
+      className="flex-1 h-full"
+      style={{ height: '100%' }}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
       {/* Read-only overlay for published flows */}
       {isFlowPublished && (
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] z-10 pointer-events-none">
+        <div className="absolute inset-0 bg-black/20 z-10 pointer-events-none">
           <div className="absolute top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg pointer-events-auto">
             <div className="flex items-center space-x-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,6 +465,9 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
           </div>
         </div>
       )}
+
+
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -392,6 +524,8 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
           dynamicNodeTypes={dynamicNodeTypes}
         />
       )}
+
+
     </div>
   )
 }
@@ -399,10 +533,10 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
 /**
  * Flow canvas component for creating and editing workflows
  */
-export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
+export const FlowCanvas: React.FC<FlowCanvasProps> = ({ isFlowPublished, ...props }) => {
   return (
     <ReactFlowProvider>
-      <FlowCanvasInner {...props} />
+      <FlowCanvasInner {...props} isFlowPublished={isFlowPublished} />
     </ReactFlowProvider>
   )
 } 

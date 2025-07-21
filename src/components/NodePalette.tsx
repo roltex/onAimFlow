@@ -1,9 +1,9 @@
 import React, { memo } from 'react'
 import { useTheme } from './ThemeProvider'
 import { useDynamicNodes } from '../contexts/DynamicNodeContext'
+import { useCompositeNodes } from '../contexts/CompositeNodeContext'
+import { IconRenderer } from './IconRenderer'
 import type { NodeType } from '../types'
-
-
 
 interface NodePaletteProps {
   onDragStart: (event: React.DragEvent, nodeType: NodeType) => void
@@ -16,6 +16,7 @@ interface NodePaletteProps {
 export const NodePalette = memo<NodePaletteProps>(({ onDragStart, disabled = false }) => {
   const { isDark } = useTheme()
   const { getAllNodeTypes } = useDynamicNodes()
+  const { compositeNodes } = useCompositeNodes()
   
   // Get all node types (built-in + dynamic)
   const allNodeTypes = getAllNodeTypes()
@@ -24,9 +25,32 @@ export const NodePalette = memo<NodePaletteProps>(({ onDragStart, disabled = fal
   const builtInNodeTypes = allNodeTypes.filter(nodeType => !nodeType.isCustom)
   const customNodeTypes = allNodeTypes.filter(nodeType => nodeType.isCustom)
 
+  // Filter published composite nodes
+  const publishedCompositeNodes = compositeNodes.filter(composite => composite.published)
+
+  // Handle composite node drag start
+  const handleCompositeDragStart = (event: React.DragEvent, composite: any) => {
+    if (disabled) {
+      event.preventDefault()
+      return
+    }
+    
+    const compositeNodeType = {
+      type: 'composite',
+      label: composite.name,
+      description: composite.description,
+      icon: composite.icon,
+      color: composite.color,
+      compositeNodeId: composite.id
+    }
+    
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(compositeNodeType))
+    event.dataTransfer.effectAllowed = 'move'
+  }
+
   return (
     <aside 
-      className={`w-64 h-full ${isDark ? 'bg-white/8' : 'bg-white/70'} backdrop-blur-md border-r ${isDark ? 'border-white/20' : 'border-gray-200'} transition-colors duration-300`}
+      className={`w-64 h-full ${isDark ? 'bg-white/8' : 'bg-white/70'} backdrop-blur-md border-r ${isDark ? 'border-white/20' : 'border-gray-200'} transition-colors duration-300 overflow-y-auto`}
       aria-label="Tools palette"
     >
       <div className="p-4">
@@ -67,7 +91,7 @@ export const NodePalette = memo<NodePaletteProps>(({ onDragStart, disabled = fal
                     className={`w-10 h-10 bg-gradient-to-r ${nodeType.color} rounded-lg flex items-center justify-center flex-shrink-0`}
                     aria-hidden="true"
                   >
-                    <span className="text-white text-lg">{nodeType.icon}</span>
+                    <IconRenderer icon={nodeType.icon} className="text-white text-lg" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -85,7 +109,7 @@ export const NodePalette = memo<NodePaletteProps>(({ onDragStart, disabled = fal
         
         {/* Custom Node Types Section */}
         {customNodeTypes.length > 0 && (
-          <div>
+          <div className="mb-6">
             <h4 className={`text-sm font-medium mb-3 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
               Custom Tools ({customNodeTypes.length})
             </h4>
@@ -110,7 +134,7 @@ export const NodePalette = memo<NodePaletteProps>(({ onDragStart, disabled = fal
                       className={`w-10 h-10 bg-gradient-to-r ${nodeType.color} rounded-lg flex items-center justify-center flex-shrink-0`}
                       aria-hidden="true"
                     >
-                      <span className="text-white text-lg">{nodeType.icon}</span>
+                      <IconRenderer icon={nodeType.icon} className="text-white text-lg" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -126,6 +150,54 @@ export const NodePalette = memo<NodePaletteProps>(({ onDragStart, disabled = fal
             </div>
           </div>
         )}
+
+        {/* Composite Nodes Section */}
+        {publishedCompositeNodes.length > 0 && (
+          <div className="mb-6">
+            <h4 className={`text-sm font-medium mb-3 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
+              Composite Tools ({publishedCompositeNodes.length})
+            </h4>
+            <div className="space-y-3">
+              {publishedCompositeNodes.map((composite) => (
+                <div
+                  key={composite.id}
+                  draggable={!disabled}
+                  onDragStart={(e) => handleCompositeDragStart(e, composite)}
+                  className={`p-3 rounded-lg border ${isDark ? 'border-white/20' : 'border-gray-200'} transition-all duration-200 ${
+                    disabled 
+                      ? `${isDark ? 'bg-gray-700/50' : 'bg-gray-100'} cursor-not-allowed opacity-50` 
+                      : `cursor-grab active:cursor-grabbing hover:scale-105 ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-white/50 hover:bg-white/70'}`
+                  }`}
+                  role="button"
+                  tabIndex={disabled ? -1 : 0}
+                  aria-label={`Drag ${composite.name} composite tool`}
+                  aria-disabled={disabled}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div 
+                      className={`w-10 h-10 bg-gradient-to-r ${composite.color} rounded-lg flex items-center justify-center flex-shrink-0`}
+                      aria-hidden="true"
+                    >
+                      <IconRenderer icon={composite.icon} className="text-white text-lg" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {composite.name}
+                      </div>
+                      <div className={`text-xs ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                        {composite.description}
+                      </div>
+                      <div className={`text-xs mt-1 ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
+                        {composite.exposedInputs.length} inputs • {composite.exposedOutputs.length} outputs
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
     </aside>
   )

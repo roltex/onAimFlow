@@ -6,6 +6,7 @@ const FLOWS_STORAGE_KEY = 'onAimFlow-flows'
 
 interface FlowManagerContextType {
   flows: Flow[]
+  isInitialized: boolean
   createFlow: (name: string, description?: string) => Flow
   deleteFlow: (flowId: string) => void
   updateFlow: (flowId: string, updates: Partial<Flow>) => void
@@ -32,7 +33,7 @@ const loadFlowData = (flowId: string) => {
     
     return { nodes, edges }
   } catch (error) {
-    console.error('Failed to load flow data:', error)
+    
     return { nodes: [], edges: [] }
   }
 }
@@ -57,7 +58,7 @@ export const FlowManagerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }))
         setFlows(parsedFlows)
       } catch (error) {
-        console.error('Failed to load flows:', error)
+
         setFlows([])
       }
     } else {
@@ -225,6 +226,7 @@ export const FlowManagerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const value: FlowManagerContextType = {
     flows,
+    isInitialized,
     createFlow,
     deleteFlow,
     updateFlow,

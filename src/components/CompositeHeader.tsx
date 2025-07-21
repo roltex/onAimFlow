@@ -1,21 +1,23 @@
 import React from 'react'
 import { useTheme } from './ThemeProvider'
 
-interface HeaderProps {
-  flowName?: string
+interface CompositeHeaderProps {
+  compositeName?: string
   onBackToDashboard?: () => void
-  onClearFlow?: () => void
+  onClearComposite?: () => void
+  onCreateComposite?: () => void
   onTogglePublish?: () => void
   isPublished?: boolean
 }
 
 /**
- * Application header with theme toggle and flow actions
+ * Header component for composite node editor
  */
-export const Header: React.FC<HeaderProps> = ({ 
-  flowName, 
+export const CompositeHeader: React.FC<CompositeHeaderProps> = ({ 
+  compositeName, 
   onBackToDashboard, 
-  onClearFlow, 
+  onClearComposite, 
+  onCreateComposite, 
   onTogglePublish, 
   isPublished 
 }) => {
@@ -29,11 +31,11 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center">
             <div>
               <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} transition-colors duration-300`}>
-                onAimFlow
+                Composite Editor
               </h1>
-              {flowName && (
+              {compositeName && (
                 <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-                  {flowName}
+                  {compositeName}
                 </p>
               )}
             </div>
@@ -41,6 +43,21 @@ export const Header: React.FC<HeaderProps> = ({
           
           {/* Actions */}
           <div className="flex items-center space-x-4">
+            {/* Create Composite Button */}
+            {onCreateComposite && (
+              <button 
+                onClick={onCreateComposite}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
+                  isDark 
+                    ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                title="Create New Composite"
+              >
+                + Create Composite
+              </button>
+            )}
+            
             {/* Back to Dashboard Button */}
             {onBackToDashboard && (
               <button 
@@ -69,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
                       ? 'bg-green-500 hover:bg-green-600 text-white'
                       : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}
-                title={isPublished ? 'Unpublish this flow' : 'Publish this flow'}
+                title={isPublished ? 'Unpublish this composite' : 'Publish this composite'}
               >
                 {isPublished ? '📤 Unpublish' : '🚀 Publish'}
               </button>
@@ -97,18 +114,18 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
             
-            {/* Clear Flow Button */}
-            {onClearFlow && (
+            {/* Clear Composite Button */}
+            {onClearComposite && (
               <button 
-                onClick={onClearFlow}
+                onClick={onClearComposite}
                 className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
                   isDark 
                     ? 'bg-red-500 hover:bg-red-600 text-white' 
                     : 'bg-red-600 hover:bg-red-700 text-white'
                 }`}
-                title="Delete this flow"
+                title="Delete this composite"
               >
-                Delete Flow
+                Delete Composite
               </button>
             )}
           </div>

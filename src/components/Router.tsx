@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Dashboard } from './Dashboard'
 import { FlowEditor } from './FlowEditor'
+import { CompositeNodeEditor } from './CompositeNodeEditor'
 import { useFlowManager } from '../contexts/FlowManagerContext'
 
 /**
@@ -16,6 +17,9 @@ export const Router: React.FC = () => {
         
         {/* Flow editor route */}
         <Route path="/flow/:flowId" element={<FlowEditorWrapper />} />
+        
+        {/* Composite editor route */}
+        <Route path="/composite/:compositeId?" element={<CompositeEditorWrapper />} />
         
         {/* Redirect any unknown routes to dashboard */}
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -34,7 +38,11 @@ const DashboardWrapper: React.FC = () => {
     navigate(`/flow/${flowId}`)
   }
   
-  return <Dashboard onOpenFlow={handleOpenFlow} />
+  const handleOpenCompositeEditor = (compositeId?: string) => {
+    navigate(`/composite/${compositeId || ''}`)
+  }
+  
+  return <Dashboard onOpenFlow={handleOpenFlow} onOpenCompositeEditor={handleOpenCompositeEditor} />
 }
 
 /**
@@ -61,6 +69,27 @@ const FlowEditorWrapper: React.FC = () => {
     <FlowEditor 
       flowId={flowId} 
       onBackToDashboard={handleBackToDashboard}
+    />
+  )
+}
+
+/**
+ * Wrapper component for CompositeNodeEditor that handles routing
+ */
+const CompositeEditorWrapper: React.FC = () => {
+  const navigate = useNavigate()
+  const { compositeId } = useParams<{ compositeId?: string }>()
+  
+  const handleBackToDashboard = () => {
+    navigate('/')
+  }
+  
+
+  
+  return (
+    <CompositeNodeEditor 
+      compositeId={compositeId} 
+      onBack={handleBackToDashboard}
     />
   )
 } 

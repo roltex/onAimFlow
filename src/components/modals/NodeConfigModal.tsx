@@ -4,6 +4,7 @@ import { FilterConditionsForm } from '../forms/FilterConditionsForm'
 import { OutputStepsForm } from '../forms/OutputStepsForm'
 import { ConfirmDeleteModal } from './ConfirmDeleteModal'
 import { useDynamicNodes } from '../../contexts/DynamicNodeContext'
+import { IconRenderer } from '../IconRenderer'
 import type { CustomNodeData, EventSource, FilterCondition, OutputStep } from '../../types'
 
 interface NodeConfigModalProps {
@@ -137,7 +138,7 @@ export const NodeConfigModal: React.FC<NodeConfigModalProps> = ({
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <div className={`w-10 h-10 bg-gradient-to-r ${nodeData.color || 'from-blue-500 to-purple-600'} rounded-lg flex items-center justify-center shadow-md`}>
-              <span className="text-white text-lg font-bold">{nodeData.icon}</span>
+              <IconRenderer icon={nodeData.icon} className="text-white text-lg" />
             </div>
             <div>
               <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>

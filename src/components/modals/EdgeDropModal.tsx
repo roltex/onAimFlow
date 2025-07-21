@@ -1,5 +1,7 @@
 import React, { useCallback, useMemo } from 'react'
 import { useTheme } from '../ThemeProvider'
+import { IconRenderer } from '../IconRenderer'
+import { useCompositeNodes } from '../../contexts/CompositeNodeContext'
 import type { NodeType, DynamicNodeType } from '../../types'
 
 // Optimized node type definitions with better categorization
@@ -62,6 +64,7 @@ export const EdgeDropModal: React.FC<EdgeDropModalProps> = React.memo(({
   dynamicNodeTypes = []
 }) => {
   const { isDark } = useTheme()
+  const { compositeNodes } = useCompositeNodes()
 
   // Memoize node types by category for better performance
   const nodeTypesByCategory = useMemo(() => {
@@ -77,8 +80,23 @@ export const EdgeDropModal: React.FC<EdgeDropModalProps> = React.memo(({
       isCustom: true
     }))
 
-    // Combine built-in and dynamic node types
-    const allNodeTypes = [...NODE_TYPES, ...dynamicNodeTypesFormatted]
+    // Convert composite nodes to a compatible format
+    const compositeNodeTypesFormatted = compositeNodes
+      .filter(composite => composite.published)
+      .map(composite => ({
+        id: composite.id,
+        type: 'composite',
+        label: composite.name,
+        description: composite.description,
+        icon: composite.icon,
+        color: composite.color,
+        category: 'composite',
+        isComposite: true,
+        compositeNodeId: composite.id
+      }))
+
+    // Combine built-in, dynamic, and composite node types
+    const allNodeTypes = [...NODE_TYPES, ...dynamicNodeTypesFormatted, ...compositeNodeTypesFormatted]
     
     const categories = allNodeTypes.reduce((acc, nodeType) => {
       const category = nodeType.category || 'other'
@@ -90,7 +108,7 @@ export const EdgeDropModal: React.FC<EdgeDropModalProps> = React.memo(({
     }, {} as Record<string, any[]>)
 
     return Object.entries(categories)
-  }, [dynamicNodeTypes])
+  }, [dynamicNodeTypes, compositeNodes])
 
   // Optimized select handler with useCallback
   const handleSelect = useCallback((nodeType: any) => {
@@ -175,7 +193,7 @@ export const EdgeDropModal: React.FC<EdgeDropModalProps> = React.memo(({
                         <div 
                           className={`w-10 h-10 bg-gradient-to-r ${nodeType.color} rounded-lg flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow`}
                         >
-                          <span className="text-white text-lg">{nodeType.icon}</span>
+                          <IconRenderer icon={nodeType.icon} className="text-white text-lg" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -187,6 +205,11 @@ export const EdgeDropModal: React.FC<EdgeDropModalProps> = React.memo(({
                           {nodeType.isCustom && (
                             <div className={`text-xs ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
                               Custom
+                            </div>
+                          )}
+                          {nodeType.isComposite && (
+                            <div className={`text-xs ${isDark ? 'text-purple-300' : 'text-purple-600'}`}>
+                              Composite
                             </div>
                           )}
                         </div>

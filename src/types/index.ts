@@ -1,7 +1,7 @@
 /**
  * Available node types in the workflow
  */
-export type NodeTypeEnum = 'event' | 'filter' | 'select' | 'output'
+export type NodeTypeEnum = 'event' | 'filter' | 'select' | 'output' | 'composite'
 
 /**
  * Port type for dynamic nodes (connection points)
@@ -17,6 +17,20 @@ export interface PortDefinition {
   type: PortType // 'input' = incoming edge, 'output' = outgoing edge, 'input/output' = both
   description?: string
   required?: boolean
+}
+
+/**
+ * Exposed port for composite nodes (maps internal ports to external ones)
+ */
+export interface ExposedPort {
+  id: string
+  name: string
+  type: PortType
+  description?: string
+  required?: boolean
+  internalNodeId: string    // Which internal node this port belongs to
+  internalPortId: string    // The specific port on that internal node
+  dataType?: string
 }
 
 /**
@@ -70,6 +84,41 @@ export interface DynamicNodeType {
 }
 
 /**
+ * Composite node definition
+ */
+export interface CompositeNode {
+  id: string
+  name: string
+  description: string
+  icon: string
+  color: string
+  category: string
+  
+  // Connection type
+  connectionType: 'input' | 'output' | 'input/output'
+  
+  // Internal structure
+  internalNodes: Node[]
+  internalEdges: Edge[]
+  
+  // Exposed ports (what becomes the composite's I/O)
+  exposedInputs: ExposedPort[]
+  exposedOutputs: ExposedPort[]
+  
+  // Publish status
+  published: boolean
+  
+  // Metadata
+  metadata: {
+    author: string
+    version: string
+    createdAt: Date
+    updatedAt: Date
+    tags?: string[]
+  }
+}
+
+/**
  * Node type definition for the palette
  */
 export interface NodeType {
@@ -83,9 +132,9 @@ export interface NodeType {
 }
 
 /**
- * Extended node type that includes dynamic types
+ * Extended node type that includes dynamic types and composite types
  */
-export type ExtendedNodeType = NodeType | DynamicNodeType
+export type ExtendedNodeType = NodeType | DynamicNodeType | CompositeNode
 
 /**
  * Event source options for EVENT nodes
@@ -136,6 +185,8 @@ export interface CustomNodeData {
   color?: string
   // Dynamic node type ID (for custom nodes)
   dynamicNodeTypeId?: string
+  // Composite node type ID (for composite nodes)
+  compositeNodeId?: string
   // Dynamic node field values
   dynamicFieldValues?: Record<string, any>
   // EVENT node specific data
@@ -147,6 +198,7 @@ export interface CustomNodeData {
   selectProperty?: string
   // OUTPUT node specific data
   outputSteps?: OutputStep[]
+  [key: string]: any // Allow additional properties for React Flow compatibility
 }
 
 /**
@@ -180,4 +232,28 @@ export interface Flow {
   nodeCount: number
   edgeCount: number
   published: boolean
+}
+
+/**
+ * Node position and basic info
+ */
+export interface Node {
+  id: string
+  type: string
+  position: { x: number; y: number }
+  data: CustomNodeData
+  [key: string]: any // Allow additional properties for React Flow compatibility
+}
+
+/**
+ * Edge connection between nodes
+ */
+export interface Edge {
+  id: string
+  source: string
+  target: string
+  sourceHandle?: string
+  targetHandle?: string
+  type?: string
+  [key: string]: any // Allow additional properties for React Flow compatibility
 } 

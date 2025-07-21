@@ -162,7 +162,7 @@ export const useEdgeDrop = (
         const { edge1, edge2 } = splitEdge(edgeDropState.edgeId, newNode.id)
         setEdges(eds => eds.filter(e => e.id !== edgeDropState.edgeId).concat([edge1, edge2]))
       } catch (error) {
-        console.error('Failed to split edge:', error)
+
       }
     } else if (edgeDropState.fromNodeId) {
       // Scenario 2: Creating connection from existing node to new node

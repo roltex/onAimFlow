@@ -9,6 +9,11 @@ interface CanvasContainerProps {
   onNodesChange?: (nodes: Node[]) => void
   onEdgesChange?: (edges: Edge[]) => void
   isFlowPublished?: boolean
+  // Composite editor props
+  isCompositeEditor?: boolean
+  compositeNode?: any
+  onCompositeChange?: (nodes: any[], edges: any[]) => void
+  onSave?: (updatedComposite: any) => void
 }
 
 /**
@@ -18,7 +23,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   flowId, 
   onNodesChange, 
   onEdgesChange,
-  isFlowPublished = false
+  isFlowPublished = false,
+  isCompositeEditor = false,
+  compositeNode,
+  onCompositeChange,
+  onSave
 }) => {
   const handleDragStart = useCallback((event: React.DragEvent, nodeType: NodeType) => {
     // Don't allow dragging when flow is published
@@ -38,6 +47,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         flowId={flowId}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        isCompositeEditor={isCompositeEditor}
+        compositeNode={compositeNode}
+        onCompositeChange={onCompositeChange}
+        onSave={onSave}
+        isFlowPublished={isFlowPublished}
       />
     </main>
   )

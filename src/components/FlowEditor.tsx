@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Header } from './Header'
 import { CanvasContainer } from './CanvasContainer'
 import { ValidationModal } from './modals/ValidationModal'
@@ -17,11 +17,11 @@ interface FlowEditorProps {
  * Flow editor component for editing specific flows
  */
 export const FlowEditor: React.FC<FlowEditorProps> = ({ flowId, onBackToDashboard }) => {
-  const { getFlow, updateFlowStats, deleteFlow, toggleFlowPublished } = useFlowManager()
+  const { getFlow, updateFlowStats, deleteFlow, toggleFlowPublished, isInitialized } = useFlowManager()
   const { dynamicNodeTypes } = useDynamicNodes()
   
-  // Memoize the flow lookup to prevent unnecessary re-renders
-  const flow = useMemo(() => getFlow(flowId), [getFlow, flowId])
+  // Get the flow directly without memoization to avoid circular dependency
+  const flow = getFlow(flowId)
   
   // Use refs to track the latest counts without causing re-renders
   const nodeCountRef = useRef<number>(0)
@@ -97,7 +97,7 @@ export const FlowEditor: React.FC<FlowEditorProps> = ({ flowId, onBackToDashboar
           })
         }
       } catch (error) {
-        console.error('Error toggling flow publish status:', error)
+  
       }
     }
   }, [flow, flowId, toggleFlowPublished, dynamicNodeTypes])
@@ -118,12 +118,12 @@ export const FlowEditor: React.FC<FlowEditorProps> = ({ flowId, onBackToDashboar
     handleValidationModalClose()
   }, [validationModal, flowId, toggleFlowPublished, handleValidationModalClose, dynamicNodeTypes])
 
-  // Redirect to dashboard if flow doesn't exist
+  // Redirect to dashboard if flow doesn't exist (only after initialization)
   useEffect(() => {
-    if (!flow) {
+    if (isInitialized && !flow) {
       onBackToDashboard()
     }
-  }, [flow, onBackToDashboard])
+  }, [flow, onBackToDashboard, isInitialized, flowId])
 
   // Initialize counts from localStorage on mount
   useEffect(() => {
