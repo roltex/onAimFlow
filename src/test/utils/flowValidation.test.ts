@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { Flow, Node, Edge, FlowValidationResult } from '../../types'
 
 // Mock validation function that works with the actual Flow interface
-const mockValidateFlow = (flow: Flow, nodes: Node[], edges: Edge[]): FlowValidationResult => {
+const mockValidateFlow = (_flow: Flow, nodes: Node[], edges: Edge[]): FlowValidationResult => {
   const errors: string[] = []
   const warnings: string[] = []
 
