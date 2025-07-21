@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react'
-import { useCompositeNodes } from '../contexts/CompositeNodeContext'
+import { useCompositeNodes } from '../hooks/useCompositeNodes'
 import { CompositeHeader } from './CompositeHeader'
 import { CanvasContainer } from './CanvasContainer'
 import { ConfirmDeleteModal } from './modals/ConfirmDeleteModal'

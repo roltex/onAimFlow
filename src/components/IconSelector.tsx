@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { useTheme } from './ThemeProvider'
+import { useTheme } from '../contexts/ThemeContext'
 import { 
   FiSettings, FiHome, FiUser, FiSearch, FiPlus, FiEdit, FiTrash, FiDownload, FiUpload, FiLink,
   FiDatabase, FiBarChart, FiTrendingUp, FiTrendingDown, FiActivity, FiFilter, FiGrid, FiList,
@@ -129,7 +129,7 @@ export const IconSelector: React.FC<IconSelectorProps> = ({
     return ALL_ICONS.find(icon => icon.icon === value) || null
   }, [value])
 
-  const handleIconSelect = (icon: { name: string; icon: string; component: any }) => {
+  const handleIconSelect = (icon: { name: string; icon: string; component: React.ComponentType<{ className?: string }> }) => {
     onChange(icon.icon)
     setIsOpen(false)
     setSearchTerm('')

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { useTheme } from '../ThemeProvider'
-import { useDynamicNodes } from '../../contexts/DynamicNodeContext'
+import { useTheme } from '../../contexts/ThemeContext'
+import { useDynamicNodes } from '../../hooks/useDynamicNodes'
 import { IconSelector } from '../IconSelector'
 import type { DynamicNodeType, PortDefinition, ConfigurableField, FieldType, SelectOption } from '../../types'
 

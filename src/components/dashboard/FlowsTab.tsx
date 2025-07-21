@@ -1,5 +1,5 @@
 import React from 'react'
-import { useTheme } from '../ThemeProvider'
+import { useTheme } from '../../contexts/ThemeContext'
 import { FlowsTable } from './FlowsTable'
 import type { Flow } from '../../types'
 

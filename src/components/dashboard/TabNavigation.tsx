@@ -1,5 +1,5 @@
 import React from 'react'
-import { useTheme } from '../ThemeProvider'
+import { useTheme } from '../../contexts/ThemeContext'
 
 interface TabNavigationProps {
   activeTab: 'flows' | 'customNodes' | 'compositeNodes'

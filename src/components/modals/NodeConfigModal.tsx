@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { useTheme } from '../ThemeProvider'
+import { useTheme } from '../../contexts/ThemeContext'
 import { FilterConditionsForm } from '../forms/FilterConditionsForm'
 import { OutputStepsForm } from '../forms/OutputStepsForm'
 import { ConfirmDeleteModal } from './ConfirmDeleteModal'
-import { useDynamicNodes } from '../../contexts/DynamicNodeContext'
+import { useDynamicNodes } from '../../hooks/useDynamicNodes'
 import { IconRenderer } from '../IconRenderer'
 import type { CustomNodeData, EventSource, FilterCondition, OutputStep } from '../../types'
 

@@ -1,12 +1,23 @@
-import React, { memo } from 'react'
-import { useTheme } from './ThemeProvider'
-import { useDynamicNodes } from '../contexts/DynamicNodeContext'
-import { useCompositeNodes } from '../contexts/CompositeNodeContext'
+import React, { memo, useMemo } from 'react'
+import { useTheme } from '../hooks/useTheme'
+import { useDynamicNodes } from '../hooks/useDynamicNodes'
+import { useCompositeNodes } from '../hooks/useCompositeNodes'
 import { IconRenderer } from './IconRenderer'
-import type { NodeType } from '../types'
+import type { DynamicNodeType, NodeTypeEnum } from '../types'
+
+export interface NormalizedNodeType {
+  id: string
+  type: NodeTypeEnum | 'dynamic'
+  label: string
+  description: string
+  icon: string
+  color: string
+  category?: string
+  isCustom?: boolean
+}
 
 interface NodePaletteProps {
-  onDragStart: (event: React.DragEvent, nodeType: NodeType) => void
+  onDragStart: (event: React.DragEvent, nodeType: NormalizedNodeType) => void
   disabled?: boolean
 }
 
@@ -18,12 +29,42 @@ export const NodePalette = memo<NodePaletteProps>(({ onDragStart, disabled = fal
   const { getAllNodeTypes } = useDynamicNodes()
   const { compositeNodes } = useCompositeNodes()
   
-  // Get all node types (built-in + dynamic)
-  const allNodeTypes = getAllNodeTypes()
+  // Normalize node types to have consistent structure
+  const normalizedNodeTypes = useMemo((): NormalizedNodeType[] => {
+    const allNodeTypes = getAllNodeTypes()
+    return allNodeTypes.map(nodeType => {
+      // Check if it's a DynamicNodeType (has 'name' property)
+      if ('name' in nodeType && 'isCustom' in nodeType) {
+        const dynamicNode = nodeType as DynamicNodeType
+        return {
+          id: dynamicNode.id,
+          type: 'dynamic',
+          label: dynamicNode.name, // Convert name to label
+          description: dynamicNode.description,
+          icon: dynamicNode.icon,
+          color: dynamicNode.color,
+          category: dynamicNode.category,
+          isCustom: dynamicNode.isCustom
+        }
+      } else {
+        // Built-in node type (already has label)
+        const builtInNode = nodeType as Record<string, unknown>
+        return {
+          id: builtInNode.id as string,
+          type: builtInNode.type as NodeTypeEnum,
+          label: builtInNode.label as string,
+          description: builtInNode.description as string,
+          icon: builtInNode.icon as string,
+          color: builtInNode.color as string,
+          category: builtInNode.category as string
+        }
+      }
+    })
+  }, [getAllNodeTypes])
   
   // Separate built-in and custom node types
-  const builtInNodeTypes = allNodeTypes.filter(nodeType => !nodeType.isCustom)
-  const customNodeTypes = allNodeTypes.filter(nodeType => nodeType.isCustom)
+  const builtInNodeTypes = normalizedNodeTypes.filter(nodeType => !('isCustom' in nodeType) || !nodeType.isCustom)
+  const customNodeTypes = normalizedNodeTypes.filter(nodeType => 'isCustom' in nodeType && nodeType.isCustom)
 
   // Filter published composite nodes
   const publishedCompositeNodes = compositeNodes.filter(composite => composite.published)
@@ -95,7 +136,7 @@ export const NodePalette = memo<NodePaletteProps>(({ onDragStart, disabled = fal
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {nodeType.label || nodeType.name}
+                      {nodeType.label}
                     </div>
                     <div className={`text-xs ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
                       {nodeType.description}
@@ -138,7 +179,7 @@ export const NodePalette = memo<NodePaletteProps>(({ onDragStart, disabled = fal
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        {nodeType.label || nodeType.name}
+                        {nodeType.label}
                       </div>
                       <div className={`text-xs ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
                         {nodeType.description}

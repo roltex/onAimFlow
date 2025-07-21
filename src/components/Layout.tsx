@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { useTheme } from './ThemeProvider'
+import { useTheme } from '../contexts/ThemeContext'
 
 interface LayoutProps {
   children: React.ReactNode

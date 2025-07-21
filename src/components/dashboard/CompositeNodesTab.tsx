@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react'
-import { useTheme } from '../ThemeProvider'
-import { useCompositeNodes } from '../../contexts/CompositeNodeContext'
+import { useTheme } from '../../hooks/useTheme'
+import { useCompositeNodes } from '../../hooks/useCompositeNodes'
 import { EditCompositeModal } from '../modals/EditCompositeModal'
 import { ConfirmDeleteModal } from '../modals/ConfirmDeleteModal'
 import { CreateCompositeModalNew } from '../modals/CreateCompositeModalNew'
@@ -146,8 +146,8 @@ export const CompositeNodesTab: React.FC<CompositeNodesTabProps> = ({ onEditComp
       }
 
       exportCompositeNodes(compositesToExport.map(c => c.id))
-    } catch (error) {
-      
+    } catch (_error) {
+      // Error handling can be added here if needed
     }
   }, [selectedCompositeNodes, compositeNodes, exportCompositeNodes])
 
@@ -168,7 +168,7 @@ export const CompositeNodesTab: React.FC<CompositeNodesTabProps> = ({ onEditComp
         
         // Clear success message after 3 seconds
         setTimeout(() => setImportSuccess(''), 3000)
-      } catch (error) {
+      } catch (_error) {
         setImportError('Failed to import composite nodes. Please check the file format.')
         setImportSuccess('')
       }

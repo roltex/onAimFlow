@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react'
-import { useFlowManager } from '../contexts/FlowManagerContext'
-import { useDynamicNodes } from '../contexts/DynamicNodeContext'
-import { useCompositeNodes } from '../contexts/CompositeNodeContext'
+import { useFlowManager } from '../hooks/useFlowManager'
+import { useDynamicNodes } from '../hooks/useDynamicNodes'
+import { useCompositeNodes } from '../hooks/useCompositeNodes'
 import { Header } from './Header'
 import { ValidationModal } from './modals/ValidationModal'
 import { ConfirmDeleteModal } from './modals/ConfirmDeleteModal'
@@ -184,8 +184,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenFlow, onOpenComposit
             validationResult
           })
         }
-      } catch (error) {
-
+      } catch (_error) {
+        // Error handling can be added here if needed
       }
     }
   }, [toggleFlowPublished, dynamicNodeTypes])
@@ -247,10 +247,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenFlow, onOpenComposit
         const savedNodes = localStorage.getItem(`onAimFlow-nodes-${flow.id}`)
         const savedEdges = localStorage.getItem(`onAimFlow-edges-${flow.id}`)
         
+        // Extract dynamic node types used in this flow
+        const nodes = savedNodes ? JSON.parse(savedNodes) : []
+        const dynamicNodeTypeIds = new Set<string>()
+        
+        nodes.forEach((node: any) => {
+          if (node.data?.dynamicNodeTypeId) {
+            dynamicNodeTypeIds.add(node.data.dynamicNodeTypeId)
+          }
+        })
+        
+        // Get the actual dynamic node type definitions
+        const flowDynamicNodeTypes = dynamicNodeTypes.filter(type => 
+          dynamicNodeTypeIds.has(type.id)
+        )
+        
         return {
           ...flow,
-          nodes: savedNodes ? JSON.parse(savedNodes) : [],
-          edges: savedEdges ? JSON.parse(savedEdges) : []
+          nodes: nodes,
+          edges: savedEdges ? JSON.parse(savedEdges) : [],
+          dynamicNodeTypes: flowDynamicNodeTypes
         }
       })
 
@@ -266,8 +282,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenFlow, onOpenComposit
       
       // Clear selection after export
       setSelectedFlows(new Set())
-    } catch (error) {
-      
+    } catch (_error) {
       setImportError('Failed to export flows')
     }
   }, [flows, selectedFlows])
@@ -290,6 +305,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenFlow, onOpenComposit
         importedFlows.forEach((flowData: any) => {
           if (!flowData.id || !flowData.name) {
             throw new Error('Invalid flow data: missing required fields')
+          }
+
+          // Import dynamic node types if they exist
+          if (flowData.dynamicNodeTypes && Array.isArray(flowData.dynamicNodeTypes)) {
+            flowData.dynamicNodeTypes.forEach((dynamicNodeType: any) => {
+              // Check if this dynamic node type already exists
+              const existingType = dynamicNodeTypes.find(type => type.id === dynamicNodeType.id)
+              if (!existingType) {
+                // Import the dynamic node type
+                importDynamicNodeTypes([dynamicNodeType])
+              }
+            })
           }
 
           // Create the flow

@@ -13,18 +13,19 @@ import {
   type Edge as ReactFlowEdge,
   type Connection,
 } from '@xyflow/react'
-import type { Node, Edge } from '../types'
+import type { Node, Edge, CompositeNode } from '../types'
 import '@xyflow/react/dist/style.css'
-import { useTheme } from './ThemeProvider'
-import { useFlowManager } from '../contexts/FlowManagerContext'
-import { useDynamicNodes } from '../contexts/DynamicNodeContext'
-import { useCompositeNodes } from '../contexts/CompositeNodeContext'
+import { useTheme } from '../hooks/useTheme'
+import { useFlowManager } from '../hooks/useFlowManager'
+import { useDynamicNodes } from '../hooks/useDynamicNodes'
+import { useCompositeNodes } from '../hooks/useCompositeNodes'
 import { CustomNode } from './CustomNode'
 import { NodeConfigModal } from './modals/NodeConfigModal'
 import { EdgeDropModal } from './modals/EdgeDropModal'
 
 import { useEdgeDrop } from '../hooks/useEdgeDrop'
-import type { NodeType, CustomNodeData, DynamicNodeType } from '../types'
+import type { CustomNodeData } from '../types'
+import type { NormalizedNodeType } from './NodePalette'
 
 interface FlowCanvasProps {
   flowId?: string
@@ -32,14 +33,14 @@ interface FlowCanvasProps {
   onEdgesChange?: (edges: Edge[]) => void
   // Composite editor props
   isCompositeEditor?: boolean
-  compositeNode?: any
-  onCompositeChange?: (nodes: any[], edges: any[]) => void
-  onSave?: (updatedComposite: any) => void
+  compositeNode?: CompositeNode
+  onCompositeChange?: (nodes: Node[], edges: Edge[]) => void
+  onSave?: (updatedComposite: CompositeNode) => void
   isFlowPublished?: boolean
 }
 
 // Create a wrapper component that handles clicks more reliably
-const ClickableCustomNode = (props: any) => {
+const ClickableCustomNode = (props: React.ComponentProps<typeof CustomNode> & { id: string }) => {
   const handleClick = useCallback(() => {
     // Use a more direct approach - find the FlowCanvas instance and call its click handler
     const event = new CustomEvent('nodeClick', { detail: { nodeId: props.id } })
@@ -95,11 +96,11 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
     } else {
       // For regular flows, use localStorage
       const saved = localStorage.getItem(getStorageKey('nodes'))
-      if (saved) {
+            if (saved) {
         try {
           return JSON.parse(saved)
-        } catch (e) {
-  
+        } catch (_e) {
+          // Error handling can be added here if needed
         }
       }
       return []
@@ -113,11 +114,11 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
     } else {
       // For regular flows, use localStorage
       const saved = localStorage.getItem(getStorageKey('edges'))
-      if (saved) {
+            if (saved) {
         try {
           return JSON.parse(saved)
-        } catch (e) {
-  
+        } catch (_e) {
+          // Error handling can be added here if needed
         }
       }
       return []
@@ -207,8 +208,9 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
 
   // Listen for node click events from the wrapper component
   useEffect(() => {
-    const handleNodeClickEvent = (event: any) => {
-      const { nodeId } = event.detail
+    const handleNodeClickEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ nodeId: string }>
+      const { nodeId } = customEvent.detail
       handleNodeClick(nodeId)
     }
 
@@ -279,43 +281,7 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
     }
   }, [selectedNode, setNodes, setEdges, handleModalClose])
 
-  // Handle keyboard delete
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    // Don't allow deletion when flow is published
-    if (isFlowPublished) return
-    
-    if (event.key === 'Delete' || event.key === 'Backspace') {
-      // Prevent default browser behavior
-      event.preventDefault()
-      
-      // Delete selected nodes
-      if (selectedNodes.length > 0) {
-        const nodeIdsToDelete = selectedNodes.map(node => node.id)
-        
-        // Remove selected nodes
-        setNodes(nds => nds.filter(node => !nodeIdsToDelete.includes(node.id)))
-        
-        // Remove edges connected to deleted nodes
-        setEdges(eds => eds.filter(edge => 
-          !nodeIdsToDelete.includes(edge.source) && !nodeIdsToDelete.includes(edge.target)
-        ))
-      }
-      
-      // Delete selected edges
-      if (selectedEdges.length > 0) {
-        const edgeIdsToDelete = selectedEdges.map(edge => edge.id)
-        setEdges(eds => eds.filter(edge => !edgeIdsToDelete.includes(edge.id)))
-      }
-    }
-  }, [selectedNodes, selectedEdges, setNodes, setEdges, isFlowPublished])
 
-  // Add keyboard event listener
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [handleKeyDown])
 
 
   // Handle drag over
@@ -380,21 +346,21 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
       }
 
       // Handle regular node types
-      const nodeType = droppedData as NodeType | DynamicNodeType
+      const nodeType = droppedData as NormalizedNodeType
       
       // Check if this is a dynamic node type
-      const isDynamicNode = 'isCustom' in nodeType && nodeType.isCustom
+      const isDynamicNode = nodeType.type === 'dynamic'
       
       // Create new node
       const newNode: Node = {
-        id: isDynamicNode ? `${nodeType.id}-${Date.now()}` : `${(nodeType as NodeType).type}-${Date.now()}`,
+        id: isDynamicNode ? `${nodeType.id}-${Date.now()}` : `${nodeType.type}-${Date.now()}`,
         type: 'custom',
         position: flowPosition,
         data: {
-          label: isDynamicNode ? nodeType.name : (nodeType as NodeType).label,
+          label: nodeType.label,
           description: nodeType.description,
           icon: nodeType.icon,
-          nodeType: isDynamicNode ? nodeType.id : (nodeType as NodeType).type,
+          nodeType: isDynamicNode ? nodeType.id : nodeType.type,
           color: nodeType.color,
           // Add dynamic node specific data
           ...(isDynamicNode && {
@@ -408,6 +374,34 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
     },
     [setNodes, reactFlowInstance, isFlowPublished, getCompositeNode]
   )
+
+  // Prevent React Flow's built-in delete key handling
+  useEffect(() => {
+    const preventDelete = (event: KeyboardEvent) => {
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        // Check if user is typing in an input field or textarea
+        const target = event.target as HTMLElement
+        const isTyping = target.tagName === 'INPUT' || 
+                        target.tagName === 'TEXTAREA' || 
+                        target.contentEditable === 'true' ||
+                        target.closest('[contenteditable="true"]')
+        
+        // If user is typing, allow normal text editing behavior
+        if (isTyping) return
+        
+        // If nodes or edges are selected, prevent deletion
+        if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+      }
+    }
+    
+    document.addEventListener('keydown', preventDelete, true) // Use capture phase
+    return () => {
+      document.removeEventListener('keydown', preventDelete, true)
+    }
+  }, [selectedNodes, selectedEdges])
 
   // Optimized edge drop handlers are now provided by the useEdgeDrop hook
 
@@ -489,6 +483,7 @@ const FlowCanvasInner: React.FC<FlowCanvasProps> = ({
         preventScrolling={true}
         onSelectionChange={isFlowPublished ? undefined : onSelectionChange}
         onEdgeDoubleClick={isFlowPublished ? undefined : handleEdgeDoubleClick}
+
       >
         <Background 
           color={isDark ? "#ffffff" : "#6b7280"} 

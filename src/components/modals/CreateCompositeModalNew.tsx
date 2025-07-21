@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useTheme } from '../ThemeProvider'
+import { useTheme } from '../../contexts/ThemeContext'
 import { IconSelector } from '../IconSelector'
 
 interface CreateCompositeModalNewProps {

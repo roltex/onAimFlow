@@ -1,8 +1,8 @@
 import React, { memo, useMemo } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { useTheme } from './ThemeProvider'
-import { useDynamicNodes } from '../contexts/DynamicNodeContext'
-import { useCompositeNodes } from '../contexts/CompositeNodeContext'
+import { useTheme } from '../hooks/useTheme'
+import { useDynamicNodes } from '../hooks/useDynamicNodes'
+import { useCompositeNodes } from '../hooks/useCompositeNodes'
 import { IconRenderer } from './IconRenderer'
 import type { CustomNodeData } from '../types'
 

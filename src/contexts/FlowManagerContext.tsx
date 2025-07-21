@@ -1,24 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import type { Flow, FlowValidationResult, DynamicNodeType } from '../types'
+import React, { useState, useCallback, useEffect } from 'react'
+import type { Flow, DynamicNodeType } from '../types'
 import { validateFlow } from '../utils/flowValidation'
+import { FlowManagerContext } from './FlowManagerContextDef'
 
 const FLOWS_STORAGE_KEY = 'onAimFlow-flows'
-
-interface FlowManagerContextType {
-  flows: Flow[]
-  isInitialized: boolean
-  createFlow: (name: string, description?: string) => Flow
-  deleteFlow: (flowId: string) => void
-  updateFlow: (flowId: string, updates: Partial<Flow>) => void
-  getFlow: (flowId: string) => Flow | undefined
-  updateFlowStats: (flowId: string, nodeCount: number, edgeCount: number) => void
-  publishFlow: (flowId: string, dynamicNodeTypes?: DynamicNodeType[]) => FlowValidationResult
-  unpublishFlow: (flowId: string) => void
-  toggleFlowPublished: (flowId: string, dynamicNodeTypes?: DynamicNodeType[]) => FlowValidationResult
-  validateFlowForPublish: (flowId: string, dynamicNodeTypes?: DynamicNodeType[]) => FlowValidationResult
-}
-
-const FlowManagerContext = createContext<FlowManagerContextType | undefined>(undefined)
 
 /**
  * Helper function to load flow data from localStorage
@@ -32,8 +17,7 @@ const loadFlowData = (flowId: string) => {
     const edges = savedEdges ? JSON.parse(savedEdges) : []
     
     return { nodes, edges }
-  } catch (error) {
-    
+  } catch (_error) {
     return { nodes: [], edges: [] }
   }
 }
@@ -51,14 +35,13 @@ export const FlowManagerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     if (savedFlows) {
       try {
-        const parsedFlows = JSON.parse(savedFlows).map((flow: any) => ({
+        const parsedFlows = JSON.parse(savedFlows).map((flow: Record<string, unknown>) => ({
           ...flow,
-          createdAt: new Date(flow.createdAt),
-          updatedAt: new Date(flow.updatedAt),
+          createdAt: new Date(flow.createdAt as string),
+          updatedAt: new Date(flow.updatedAt as string),
         }))
         setFlows(parsedFlows)
-      } catch (error) {
-
+      } catch (_error) {
         setFlows([])
       }
     } else {
@@ -224,7 +207,7 @@ export const FlowManagerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return validateFlow(nodes, edges, dynamicNodeTypes)
   }, [flows])
 
-  const value: FlowManagerContextType = {
+  const value = {
     flows,
     isInitialized,
     createFlow,
@@ -245,13 +228,6 @@ export const FlowManagerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   )
 }
 
-/**
- * Hook to use the FlowManagerContext
- */
-export const useFlowManager = (): FlowManagerContextType => {
-  const context = useContext(FlowManagerContext)
-  if (!context) {
-    throw new Error('useFlowManager must be used within a FlowManagerProvider')
-  }
-  return context
-} 
+
+
+ 

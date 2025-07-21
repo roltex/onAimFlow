@@ -1,5 +1,5 @@
 import React from 'react'
-import { useTheme } from '../ThemeProvider'
+import { useTheme } from '../../contexts/ThemeContext'
 import type { FlowValidationResult } from '../../types'
 import { getValidationSummary } from '../../utils/flowValidation'
 import { getCompositeValidationSummary, type CompositeValidationResult } from '../../utils/compositeValidation'

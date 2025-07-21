@@ -1,5 +1,5 @@
 import React from 'react'
-import { useTheme } from '../ThemeProvider'
+import { useTheme } from '../../contexts/ThemeContext'
 import type { CompositeNode } from '../../types'
 
 interface CompositeNodesTableProps {

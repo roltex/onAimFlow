@@ -1,4 +1,5 @@
-export { ThemeProvider, useTheme } from './ThemeProvider'
+export { ThemeProvider } from './ThemeProvider'
+export { useTheme } from '../contexts/ThemeContext'
 export { Header } from './Header'
 export { FlowCanvas } from './FlowCanvas'
 export { CustomNode } from './CustomNode'

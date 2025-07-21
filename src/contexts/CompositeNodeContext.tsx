@@ -1,33 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import type { CompositeNode } from '../types'
-import { validateCompositeForPublish as validateCompositeForPublishUtil, type CompositeValidationResult } from '../utils/compositeValidation'
-import { useDynamicNodes } from './DynamicNodeContext'
-
-interface CompositeNodeContextType {
-  compositeNodes: CompositeNode[]
-  createCompositeNode: (composite: Omit<CompositeNode, 'id' | 'metadata'>) => CompositeNode
-  updateCompositeNode: (id: string, updates: Partial<CompositeNode>) => void
-  deleteCompositeNode: (id: string) => void
-  getCompositeNode: (id: string) => CompositeNode | undefined
-  toggleCompositePublished: (id: string) => CompositeValidationResult
-  publishComposite: (id: string) => CompositeValidationResult
-  unpublishComposite: (id: string) => void
-  validateCompositeForPublish: (id: string) => CompositeValidationResult
-  exportCompositeNodes: (nodeIds?: string[]) => void
-  importCompositeNodes: (compositeNodes: CompositeNode[]) => void
-}
-
-const CompositeNodeContext = createContext<CompositeNodeContextType | undefined>(undefined)
+import { validateCompositeForPublish as validateCompositeForPublishUtil } from '../utils/compositeValidation'
+import { useDynamicNodes } from '../hooks/useDynamicNodes'
+import { CompositeNodeContext } from './CompositeNodeContextDef'
 
 const STORAGE_KEY = 'onAimFlow-composite-nodes'
 
-export const useCompositeNodes = () => {
-  const context = useContext(CompositeNodeContext)
-  if (!context) {
-    throw new Error('useCompositeNodes must be used within a CompositeNodeProvider')
-  }
-  return context
-}
+
 
 interface CompositeNodeProviderProps {
   children: React.ReactNode
@@ -45,19 +24,19 @@ export const CompositeNodeProvider: React.FC<CompositeNodeProviderProps> = ({ ch
       try {
         const parsed = JSON.parse(savedCompositeNodes)
         // Convert date strings back to Date objects and ensure published/connectionType fields exist
-        const nodesWithDates = parsed.map((node: any) => ({
+        const nodesWithDates = parsed.map((node: Record<string, unknown>) => ({
           ...node,
-          published: node.published ?? false,
-          connectionType: node.connectionType ?? 'input/output',
+          published: (node.published as boolean) ?? false,
+          connectionType: (node.connectionType as string) ?? 'input/output',
           metadata: {
-            ...node.metadata,
-            createdAt: new Date(node.metadata.createdAt),
-            updatedAt: new Date(node.metadata.updatedAt)
+            ...(node.metadata as Record<string, unknown>),
+            createdAt: new Date((node.metadata as Record<string, unknown>).createdAt as string),
+            updatedAt: new Date((node.metadata as Record<string, unknown>).updatedAt as string)
           }
         }))
         setCompositeNodes(nodesWithDates)
-      } catch (error) {
-
+      } catch (_error) {
+        // Error handling can be added here if needed
       }
     }
     setIsInitialized(true)
@@ -182,55 +161,45 @@ export const CompositeNodeProvider: React.FC<CompositeNodeProviderProps> = ({ ch
   }, [compositeNodes])
 
   const exportCompositeNodes = useCallback((nodeIds?: string[]) => {
-    try {
-      const nodesToExport = nodeIds 
-        ? compositeNodes.filter(node => nodeIds.includes(node.id))
-        : compositeNodes
+    const nodesToExport = nodeIds 
+      ? compositeNodes.filter(node => nodeIds.includes(node.id))
+      : compositeNodes
 
-      if (nodesToExport.length === 0) {
-        throw new Error('No composite nodes selected for export')
-      }
-
-      const dataStr = JSON.stringify(nodesToExport, null, 2)
-      const dataBlob = new Blob([dataStr], { type: 'application/json' })
-      
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(dataBlob)
-      link.download = `onAimFlow-composite-nodes-${new Date().toISOString().split('T')[0]}.json`
-      link.click()
-      
-      URL.revokeObjectURL(link.href)
-    } catch (error) {
-
-      throw error
+    if (nodesToExport.length === 0) {
+      throw new Error('No composite nodes selected for export')
     }
+
+    const dataStr = JSON.stringify(nodesToExport, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(dataBlob)
+    link.download = `onAimFlow-composite-nodes-${new Date().toISOString().split('T')[0]}.json`
+    link.click()
+    
+    URL.revokeObjectURL(link.href)
   }, [compositeNodes])
 
   const importCompositeNodes = useCallback((importedNodes: CompositeNode[]) => {
-    try {
-      // Validate imported nodes
-      importedNodes.forEach(node => {
-        if (!node.id || !node.name || !node.internalNodes || !node.internalEdges) {
-          throw new Error('Invalid composite node data: missing required fields')
-        }
-      })
+    // Validate imported nodes
+    importedNodes.forEach(node => {
+      if (!node.id || !node.name || !node.internalNodes || !node.internalEdges) {
+        throw new Error('Invalid composite node data: missing required fields')
+      }
+    })
 
-      // Add imported nodes with new IDs to avoid conflicts
-      const nodesWithNewIds = importedNodes.map(node => ({
-        ...node,
-        id: generateId(),
-        metadata: {
-          ...node.metadata,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      }))
+    // Add imported nodes with new IDs to avoid conflicts
+    const nodesWithNewIds = importedNodes.map(node => ({
+      ...node,
+      id: generateId(),
+      metadata: {
+        ...node.metadata,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    }))
 
-      setCompositeNodes(prev => [...prev, ...nodesWithNewIds])
-    } catch (error) {
-
-      throw error
-    }
+    setCompositeNodes(prev => [...prev, ...nodesWithNewIds])
   }, [generateId])
 
   return (

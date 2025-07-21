@@ -1,2 +1,7 @@
 export { useFlowData } from './useFlowData'
-export { useEdgeDrop } from './useEdgeDrop' 
+export { useEdgeDrop } from './useEdgeDrop'
+export { useCompositeOptimization } from './useCompositeOptimization'
+export { useTheme } from '../contexts/ThemeContext'
+export { useCompositeNodes } from './useCompositeNodes'
+export { useDynamicNodes } from './useDynamicNodes'
+export { useFlowManager } from './useFlowManager' 

@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from '
 import { Dashboard } from './Dashboard'
 import { FlowEditor } from './FlowEditor'
 import { CompositeNodeEditor } from './CompositeNodeEditor'
-import { useFlowManager } from '../contexts/FlowManagerContext'
+import { useFlowManager } from '../hooks/useFlowManager'
 
 /**
  * Router component that handles navigation between dashboard and flows

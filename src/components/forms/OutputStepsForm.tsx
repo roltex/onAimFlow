@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { useTheme } from '../ThemeProvider'
+import { useTheme } from '../../contexts/ThemeContext'
 import type { OutputStep } from '../../types'
 
 interface OutputStepsFormProps {

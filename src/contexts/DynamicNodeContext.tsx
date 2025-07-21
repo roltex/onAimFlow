@@ -1,20 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import type { DynamicNodeType } from '../types'
+import { DynamicNodeContext } from './DynamicNodeContextDef'
 
 const DYNAMIC_NODES_STORAGE_KEY = 'onAimFlow-dynamic-nodes'
-
-interface DynamicNodeContextType {
-  dynamicNodeTypes: DynamicNodeType[]
-  createDynamicNodeType: (nodeType: Omit<DynamicNodeType, 'id' | 'createdAt' | 'updatedAt' | 'isCustom'>) => DynamicNodeType
-  updateDynamicNodeType: (id: string, updates: Partial<DynamicNodeType>) => void
-  deleteDynamicNodeType: (id: string) => void
-  getDynamicNodeType: (id: string) => DynamicNodeType | undefined
-  getAllNodeTypes: () => (DynamicNodeType | any)[]
-  importDynamicNodeTypes: (nodeTypes: DynamicNodeType[]) => void
-  exportDynamicNodeTypes: (nodeTypeIds?: string[]) => void
-}
-
-const DynamicNodeContext = createContext<DynamicNodeContextType | undefined>(undefined)
 
 /**
  * DynamicNodeProvider component that provides dynamic node type management
@@ -29,14 +17,13 @@ export const DynamicNodeProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     if (savedDynamicNodes) {
       try {
-        const parsedDynamicNodes = JSON.parse(savedDynamicNodes).map((nodeType: any) => ({
+        const parsedDynamicNodes = JSON.parse(savedDynamicNodes).map((nodeType: Record<string, unknown>) => ({
           ...nodeType,
-          createdAt: new Date(nodeType.createdAt),
-          updatedAt: new Date(nodeType.updatedAt),
+          createdAt: new Date(nodeType.createdAt as string),
+          updatedAt: new Date(nodeType.updatedAt as string),
         }))
         setDynamicNodeTypes(parsedDynamicNodes)
-      } catch (error) {
-
+      } catch (_error) {
         setDynamicNodeTypes([])
       }
     } else {
@@ -164,29 +151,24 @@ export const DynamicNodeProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Export dynamic node types
   const exportDynamicNodeTypes = useCallback((nodeTypeIds?: string[]) => {
-    try {
-      // If no IDs specified, export all dynamic node types
-      const nodeTypesToExport = nodeTypeIds 
-        ? dynamicNodeTypes.filter(nodeType => nodeTypeIds.includes(nodeType.id))
-        : dynamicNodeTypes
+    // If no IDs specified, export all dynamic node types
+    const nodeTypesToExport = nodeTypeIds 
+      ? dynamicNodeTypes.filter(nodeType => nodeTypeIds.includes(nodeType.id))
+      : dynamicNodeTypes
 
-      if (nodeTypesToExport.length === 0) {
-        throw new Error('No node types selected for export')
-      }
-
-      const dataStr = JSON.stringify(nodeTypesToExport, null, 2)
-      const dataBlob = new Blob([dataStr], { type: 'application/json' })
-      
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(dataBlob)
-      link.download = `onAimFlow-custom-nodes-${new Date().toISOString().split('T')[0]}.json`
-      link.click()
-      
-      URL.revokeObjectURL(link.href)
-    } catch (error) {
-
-      throw error
+    if (nodeTypesToExport.length === 0) {
+      throw new Error('No node types selected for export')
     }
+
+    const dataStr = JSON.stringify(nodeTypesToExport, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(dataBlob)
+    link.download = `onAimFlow-custom-nodes-${new Date().toISOString().split('T')[0]}.json`
+    link.click()
+    
+    URL.revokeObjectURL(link.href)
   }, [dynamicNodeTypes])
 
   return (
@@ -205,13 +187,6 @@ export const DynamicNodeProvider: React.FC<{ children: React.ReactNode }> = ({ c
   )
 }
 
-/**
- * Hook to use the dynamic node context
- */
-export const useDynamicNodes = (): DynamicNodeContextType => {
-  const context = useContext(DynamicNodeContext)
-  if (!context) {
-    throw new Error('useDynamicNodes must be used within a DynamicNodeProvider')
-  }
-  return context
-} 
+
+
+ 

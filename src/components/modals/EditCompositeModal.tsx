@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useTheme } from '../ThemeProvider'
-import { useCompositeNodes } from '../../contexts/CompositeNodeContext'
+import { useTheme } from '../../hooks/useTheme'
+import { useCompositeNodes } from '../../hooks/useCompositeNodes'
 import { IconSelector } from '../IconSelector'
 import type { CompositeNode } from '../../types'
 

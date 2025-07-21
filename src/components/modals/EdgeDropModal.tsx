@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react'
-import { useTheme } from '../ThemeProvider'
+import { useTheme } from '../../hooks/useTheme'
 import { IconRenderer } from '../IconRenderer'
-import { useCompositeNodes } from '../../contexts/CompositeNodeContext'
+import { useCompositeNodes } from '../../hooks/useCompositeNodes'
 import type { NodeType, DynamicNodeType } from '../../types'
 
 // Optimized node type definitions with better categorization
@@ -47,7 +47,7 @@ const NODE_TYPES: NodeType[] = [
 interface EdgeDropModalProps {
   isOpen: boolean
   onClose: () => void
-  onSelect: (nodeType: NodeType | DynamicNodeType) => void
+  onSelect: (nodeType: any) => void // Using any since the modal creates its own normalized format
   position?: { x: number; y: number }
   sourceNodeLabel?: string
   dynamicNodeTypes?: DynamicNodeType[]

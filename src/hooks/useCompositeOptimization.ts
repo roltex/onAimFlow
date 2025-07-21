@@ -4,7 +4,6 @@ import type { CompositeNode, Node, Edge } from '../types'
 interface CompositeOptimizationOptions {
   maxNodes?: number
   maxEdges?: number
-  enableVirtualization?: boolean
   cacheResults?: boolean
 }
 
@@ -22,7 +21,6 @@ export const useCompositeOptimization = (options: CompositeOptimizationOptions =
   const {
     maxNodes = 50,
     maxEdges = 100,
-    enableVirtualization = true,
     cacheResults = true
   } = options
 
@@ -90,15 +88,21 @@ export const useCompositeOptimization = (options: CompositeOptimizationOptions =
     const centerX = nodes.reduce((sum, node) => sum + node.position.x, 0) / nodes.length
     const centerY = nodes.reduce((sum, node) => sum + node.position.y, 0) / nodes.length
 
-    // Optimize positions to reduce edge crossings
+    // Optimize positions to reduce edge crossings and center the layout
     const optimizedNodes = nodes.map(node => {
       const connectedEdges = edges.filter(edge => 
         edge.source === node.id || edge.target === node.id
       )
 
-      // Adjust position based on connections
+      // Adjust position based on connections and center
       let newX = node.position.x
       let newY = node.position.y
+
+      // Move towards center if no connections
+      if (connectedEdges.length === 0) {
+        newX += (centerX - node.position.x) * 0.1
+        newY += (centerY - node.position.y) * 0.1
+      }
 
       connectedEdges.forEach(edge => {
         const connectedNode = nodeMap.get(edge.source === node.id ? edge.target : edge.source)

@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react'
-import { NodePalette } from './NodePalette'
+import { NodePalette, type NormalizedNodeType } from './NodePalette'
 import { FlowCanvas } from './FlowCanvas'
-import type { NodeType } from '../types'
+import type { CompositeNode } from '../types'
 import type { Node, Edge } from '@xyflow/react'
 
 interface CanvasContainerProps {
@@ -11,9 +11,9 @@ interface CanvasContainerProps {
   isFlowPublished?: boolean
   // Composite editor props
   isCompositeEditor?: boolean
-  compositeNode?: any
-  onCompositeChange?: (nodes: any[], edges: any[]) => void
-  onSave?: (updatedComposite: any) => void
+  compositeNode?: CompositeNode
+  onCompositeChange?: (nodes: Node[], edges: Edge[]) => void
+  onSave?: (updatedComposite: CompositeNode) => void
 }
 
 /**
@@ -29,7 +29,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onCompositeChange,
   onSave
 }) => {
-  const handleDragStart = useCallback((event: React.DragEvent, nodeType: NodeType) => {
+  const handleDragStart = useCallback((event: React.DragEvent, nodeType: NormalizedNodeType) => {
     // Don't allow dragging when flow is published
     if (isFlowPublished) {
       event.preventDefault()

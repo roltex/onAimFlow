@@ -1,6 +1,19 @@
 import { useCallback, useState } from 'react'
 import { useReactFlow, type Node, type Edge } from '@xyflow/react'
-import type { NodeType, DynamicNodeType } from '../types'
+
+// Define the normalized node type that EdgeDropModal passes
+interface NormalizedNodeType {
+  id: string
+  type: string
+  label: string
+  description: string
+  icon: string
+  color: string
+  category: string
+  isCustom?: boolean
+  isComposite?: boolean
+  compositeNodeId?: string
+}
 
 interface EdgeDropState {
   isOpen: boolean
@@ -14,9 +27,9 @@ interface UseEdgeDropReturn {
   edgeDropState: EdgeDropState
   handleConnectEnd: (event: MouseEvent | TouchEvent, connectionState: any) => void
   handleEdgeDoubleClick: (event: React.MouseEvent, edge: Edge) => void
-  handleNodeTypeSelect: (nodeType: NodeType | DynamicNodeType) => void
+  handleNodeTypeSelect: (nodeType: NormalizedNodeType) => void
   closeModal: () => void
-  createNodeAtPosition: (nodeType: NodeType | DynamicNodeType, position: { x: number; y: number }) => Node
+  createNodeAtPosition: (nodeType: NormalizedNodeType, position: { x: number; y: number }) => Node
   createEdge: (sourceId: string, targetId: string) => Edge
   splitEdge: (edgeId: string, newNodeId: string) => { edge1: Edge; edge2: Edge }
 }
@@ -41,26 +54,32 @@ export const useEdgeDrop = (
   })
 
   // Memoized node creation function
-  const createNodeAtPosition = useCallback((nodeType: NodeType | DynamicNodeType, position: { x: number; y: number }): Node => {
+  const createNodeAtPosition = useCallback((nodeType: NormalizedNodeType, position: { x: number; y: number }): Node => {
     const flowPosition = screenToFlowPosition(position)
     
     // Check if this is a dynamic node type
-    const isDynamicNode = 'isCustom' in nodeType && nodeType.isCustom
+    const isDynamicNode = nodeType.isCustom
+    const isCompositeNode = nodeType.isComposite
     
     return {
-      id: isDynamicNode ? `${nodeType.id}-${Date.now()}` : `${(nodeType as NodeType).type}-${Date.now()}`,
+      id: isCompositeNode ? `composite-${Date.now()}` : isDynamicNode ? `${nodeType.id}-${Date.now()}` : `${nodeType.type}-${Date.now()}`,
       type: 'custom',
       position: flowPosition,
       data: {
-        label: isDynamicNode ? nodeType.name : (nodeType as NodeType).label,
+        label: nodeType.label,
         description: nodeType.description,
         icon: nodeType.icon,
-        nodeType: isDynamicNode ? nodeType.id : (nodeType as NodeType).type,
+        nodeType: isCompositeNode ? 'composite' : isDynamicNode ? nodeType.id : nodeType.type,
         color: nodeType.color,
         // Add dynamic node specific data
         ...(isDynamicNode && {
           dynamicNodeTypeId: nodeType.id,
           dynamicFieldValues: {},
+        }),
+        // Add composite node specific data
+        ...(isCompositeNode && {
+          compositeNodeId: nodeType.compositeNodeId,
+          connectionType: 'input/output', // Default connection type for composite nodes
         }),
       },
     }
@@ -150,7 +169,7 @@ export const useEdgeDrop = (
   }, [])
 
   // Optimized node type selection handler
-  const handleNodeTypeSelect = useCallback((nodeType: NodeType | DynamicNodeType) => {
+  const handleNodeTypeSelect = useCallback((nodeType: NormalizedNodeType) => {
     if (!edgeDropState.position) return
 
     const newNode = createNodeAtPosition(nodeType, edgeDropState.position)
@@ -161,8 +180,8 @@ export const useEdgeDrop = (
       try {
         const { edge1, edge2 } = splitEdge(edgeDropState.edgeId, newNode.id)
         setEdges(eds => eds.filter(e => e.id !== edgeDropState.edgeId).concat([edge1, edge2]))
-      } catch (error) {
-
+      } catch (_error) {
+        // Error handling can be added here if needed
       }
     } else if (edgeDropState.fromNodeId) {
       // Scenario 2: Creating connection from existing node to new node

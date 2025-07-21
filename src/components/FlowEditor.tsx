@@ -3,8 +3,8 @@ import { Header } from './Header'
 import { CanvasContainer } from './CanvasContainer'
 import { ValidationModal } from './modals/ValidationModal'
 import { ConfirmDeleteModal } from './modals/ConfirmDeleteModal'
-import { useFlowManager } from '../contexts/FlowManagerContext'
-import { useDynamicNodes } from '../contexts/DynamicNodeContext'
+import { useFlowManager } from '../hooks/useFlowManager'
+import { useDynamicNodes } from '../hooks/useDynamicNodes'
 import type { Node, Edge } from '@xyflow/react'
 import type { FlowValidationResult } from '../types'
 
@@ -96,8 +96,8 @@ export const FlowEditor: React.FC<FlowEditorProps> = ({ flowId, onBackToDashboar
             validationResult
           })
         }
-      } catch (error) {
-  
+            } catch (_error) {
+        // Error handling can be added here if needed
       }
     }
   }, [flow, flowId, toggleFlowPublished, dynamicNodeTypes])
@@ -133,7 +133,7 @@ export const FlowEditor: React.FC<FlowEditorProps> = ({ flowId, onBackToDashboar
     if (savedNodes) {
       try {
         nodeCountRef.current = JSON.parse(savedNodes).length
-      } catch (e) {
+      } catch (_e) {
         nodeCountRef.current = 0
       }
     }
@@ -141,7 +141,7 @@ export const FlowEditor: React.FC<FlowEditorProps> = ({ flowId, onBackToDashboar
     if (savedEdges) {
       try {
         edgeCountRef.current = JSON.parse(savedEdges).length
-      } catch (e) {
+      } catch (_e) {
         edgeCountRef.current = 0
       }
     }
